@@ -17,9 +17,14 @@
     messagingSenderId: "windmill-beans",
     appId: "windmill-beans"
   };
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.database();
+  /* Guard against double-init (e.g. hot-reload) */
+  const _fbApp = (firebase.apps && firebase.apps.length > 0)
+    ? firebase.app()
+    : firebase.initializeApp(firebaseConfig);
+  const db = firebase.database(_fbApp);
   const FB_PATH = 'dashboard/data';
+  const TRANSFER_REQUESTS_PATH = 'transfer_requests';
+  const ROASTERY_HISTORY_PATH  = 'roastery_history';
 </script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:wght@500;600;700&family=Inter:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&family=Montserrat:wght@400;500;600;700&family=Lato:wght@400;700&family=Roboto+Mono:wght@500;700&family=DM+Serif+Display&family=Libre+Caslon+Text:wght@400;700&display=swap');
@@ -126,6 +131,30 @@ h1,h2,h3,h4,h5,h6,.section-title,.origin-name,.origin-section-title,.store-name,
 .color-picker-row input[type="color"]::-webkit-color-swatch{border:none;border-radius:4px}
 .color-picker-row input[type="text"]{flex:1;font-family:'Roboto Mono',monospace;font-size:12.5px;text-transform:uppercase;letter-spacing:.5px}
 
+/* ===== ACTIVE SHIPMENTS BLOCK ===== */
+.active-shipments-block{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:24px;margin-bottom:24px}
+.active-shipments-block .block-header{display:flex;align-items:center;gap:10px;margin-bottom:18px}
+.active-shipments-block .block-title{font-family:var(--font-head);font-size:17px;font-weight:700;color:var(--heading)}
+.shipment-count-badge{display:inline-flex;align-items:center;justify-content:center;background:var(--teal);color:#fff;border-radius:20px;padding:2px 9px;font-size:11px;font-weight:700;letter-spacing:.5px;min-width:24px}
+.shipments-empty{text-align:center;color:var(--muted);padding:28px 0;font-size:13px;opacity:.8}
+.shipment-pulse{animation:sPulse 2s ease-in-out infinite}
+@keyframes sPulse{0%,100%{opacity:1}50%{opacity:.55}}
+
+/* ===== ROASTERY STOCK BY ORIGIN ===== */
+.roastery-origin-stock-block{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:24px;margin-bottom:24px}
+.ros-origin-row{display:grid;grid-template-columns:140px 1fr 90px 100px;align-items:center;gap:14px;padding:10px 0;border-bottom:1px solid var(--line)}
+.ros-origin-row:last-child{border-bottom:none}
+.ros-origin-name{font-weight:600;color:var(--heading);font-size:14px;font-family:var(--font-head)}
+.ros-origin-meta{font-size:11px;color:var(--muted);margin-top:2px}
+.ros-bar-wrap{display:flex;flex-direction:column;gap:4px}
+.ros-sent-label{font-size:11px;color:var(--muted)}
+.ros-avail-val{font-weight:700;color:var(--heading);font-size:15px;text-align:right;font-family:var(--font-num)}
+
+/* ===== TRANSFER HISTORY LOG ===== */
+.history-log-block{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:24px;margin-bottom:24px}
+.badge.accepted{background:var(--green-dim);color:var(--green-2);border:1px solid rgba(107,160,90,.3)}
+body.theme-dark .badge.accepted{color:#7dc86a}
+
 /* ===== LOW STOCK ALERTS ===== */
 .stock-alerts{display:flex;flex-direction:column;gap:8px;margin-bottom:24px}
 .stock-alert{padding:12px 18px;border-radius:10px;font-family:var(--font-body);font-size:13.5px;font-weight:500;display:flex;align-items:center;gap:10px;border-left:4px solid}
@@ -195,6 +224,32 @@ header{background:var(--coffee);border-bottom:none;padding:16px 32px;display:gri
 .simple-clock{font-family:var(--font-body);font-size:17px;color:#f5ecd5;font-weight:500;letter-spacing:1px;font-variant-numeric:tabular-nums;opacity:.92}
 .btn-ghost{background:transparent;border:1px solid rgba(245,236,213,.2);color:#f5ecd5;padding:7px 16px;border-radius:20px;font-family:var(--font-body);font-size:12px;font-weight:500;cursor:pointer;transition:all .2s;letter-spacing:.3px}
 .btn-ghost:hover{background:rgba(245,236,213,.08);border-color:rgba(245,236,213,.35)}
+/* ===== SYNC REFRESH BUTTON ===== */
+.sync-refresh-btn{display:flex;align-items:center;gap:5px}
+.sync-refresh-btn .sync-icon{display:inline-block;transition:transform .3s;font-style:normal}
+.sync-refresh-btn.spinning .sync-icon{animation:spinIcon .7s linear infinite}
+@keyframes spinIcon{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+.sync-refresh-btn:disabled{opacity:.5;cursor:not-allowed}
+/* ===== LAST-SYNCED MINI LABEL ===== */
+#lastSyncedLabel{font-size:10px;color:rgba(245,236,213,.45);letter-spacing:.3px;white-space:nowrap;margin-left:2px}
+/* ===== TRANSFER SUCCESS BANNER ===== */
+#transferSuccessBanner{position:fixed;top:80px;left:50%;transform:translateX(-50%) translateY(-20px);z-index:9999;background:var(--panel);border:1.5px solid var(--green-2);border-radius:16px;padding:20px 28px;min-width:340px;max-width:480px;box-shadow:0 8px 40px rgba(58,44,30,.18);display:none;animation:bannerIn .3s ease forwards}
+#transferSuccessBanner.show{display:block}
+@keyframes bannerIn{from{opacity:0;transform:translateX(-50%) translateY(-30px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+.tsb-header{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.tsb-icon{font-size:22px}
+.tsb-title{font-family:var(--font-head);font-size:17px;font-weight:700;color:var(--green-2)}
+body.theme-dark .tsb-title{color:#7dc86a}
+.tsb-close{margin-left:auto;background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:0 4px;line-height:1}
+.tsb-ref{background:var(--green-dim);border:1px solid rgba(107,160,90,.35);border-radius:10px;padding:12px 16px;margin-bottom:10px}
+.tsb-ref-label{font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);font-weight:700;margin-bottom:4px}
+.tsb-ref-code{font-family:'Roboto Mono',monospace;font-size:18px;font-weight:700;color:var(--green-2);letter-spacing:2px}
+body.theme-dark .tsb-ref-code{color:#7dc86a}
+.tsb-ref-hint{font-size:11px;color:var(--muted);margin-top:5px}
+.tsb-details{font-size:13px;color:var(--text);display:flex;gap:16px;flex-wrap:wrap;margin-top:6px}
+.tsb-detail-item{display:flex;flex-direction:column;gap:2px}
+.tsb-detail-lbl{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-weight:600}
+.tsb-detail-val{font-weight:600;color:var(--heading);font-size:13.5px}
 body.theme-dark header{background:var(--coffee-dark);border-bottom:1px solid rgba(176,142,74,.15)}
 @media(max-width:800px){header{padding:14px 18px;grid-template-columns:1fr}.brand-title{font-size:17px}.simple-clock{font-size:15px}}
 
@@ -455,6 +510,16 @@ tr:hover td{background:var(--panel-3)}
 .danger-zone{background:var(--red-dim);border:1px solid rgba(194,77,58,.25);border-radius:14px;padding:26px;margin-bottom:20px}
 .danger-zone h3{color:var(--red)}
 
+
+/* ===== ERP INTEGRATION — Send to Store ===== */
+.btn-send{background:rgba(90,144,128,.15);border:1px solid rgba(90,144,128,.45);color:var(--teal);padding:4px 10px;border-radius:5px;font-size:11px;font-weight:600;cursor:pointer;transition:all .2s;white-space:nowrap}
+.btn-send:hover{background:rgba(90,144,128,.28);color:#fff}
+.recent-roasts-panel{border:2px solid rgba(90,144,128,.35);background:rgba(90,144,128,.04);border-radius:14px;padding:22px 24px;margin-top:28px}
+.recent-roasts-panel h3{display:flex;align-items:center;gap:10px;font-family:var(--font-head);color:var(--teal);margin-bottom:6px}
+.badge.teal-pulse{background:rgba(90,144,128,.15);color:var(--teal);border:1px solid rgba(90,144,128,.35);animation:rrPulse 2s ease-in-out infinite}
+@keyframes rrPulse{0%,100%{opacity:1}50%{opacity:.55}}
+.badge.confirmed{background:rgba(107,160,90,.15);color:var(--green-2);border:1px solid rgba(107,160,90,.35)}
+
 /* STORE MANAGE */
 .store-manage-card{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:18px;margin-bottom:12px;transition:border-color .2s}
 .store-manage-card:hover{border-color:rgba(176,142,74,.25)}
@@ -637,11 +702,33 @@ body.theme-light .inv-chip{background:linear-gradient(135deg,#ffffff 0%,#fbf7ee 
       <span class="sync-dot"></span>
       <span id="syncLabel">CONNECTING</span>
     </div>
+    <span id="lastSyncedLabel"></span>
+    <button class="btn-ghost sync-refresh-btn" id="syncRefreshBtn" onclick="manualSync()" title="Pull latest data from server"><i class="sync-icon">↻</i> Sync</button>
     <div class="simple-clock" id="simpleClock">--:--:--</div>
     <button class="btn-ghost" onclick="toggleTheme()" title="Toggle theme" id="themeToggleBtn">🌙</button>
     <button class="btn-ghost" onclick="doLogout()">Log Out</button>
   </div>
 </header>
+
+<!-- ===== TRANSFER SUCCESS BANNER ===== -->
+<div id="transferSuccessBanner">
+  <div class="tsb-header">
+    <span class="tsb-icon">📤</span>
+    <span class="tsb-title">Transfer Dispatched!</span>
+    <button class="tsb-close" onclick="document.getElementById('transferSuccessBanner').classList.remove('show')">✕</button>
+  </div>
+  <div class="tsb-ref">
+    <div class="tsb-ref-label">Transaction Reference</div>
+    <div class="tsb-ref-code" id="tsbRefCode">TRF---------</div>
+    <div class="tsb-ref-hint">Save this reference to track the transfer in your logs.</div>
+  </div>
+  <div class="tsb-details">
+    <div class="tsb-detail-item"><span class="tsb-detail-lbl">Bean</span><span class="tsb-detail-val" id="tsbBean">—</span></div>
+    <div class="tsb-detail-item"><span class="tsb-detail-lbl">Origin</span><span class="tsb-detail-val" id="tsbOrigin">—</span></div>
+    <div class="tsb-detail-item"><span class="tsb-detail-lbl">Weight</span><span class="tsb-detail-val" id="tsbWeight">— kg</span></div>
+    <div class="tsb-detail-item"><span class="tsb-detail-lbl">Sent At</span><span class="tsb-detail-val" id="tsbTime">—</span></div>
+  </div>
+</div>
 
 <nav class="tabs" id="tabs">
   <button class="tab active" data-page="dashboard">Dashboard</button>
@@ -883,9 +970,44 @@ body.theme-light .inv-chip{background:linear-gradient(135deg,#ffffff 0%,#fbf7ee 
   <!-- Wasted Summary Origin by Origin -->
   <h2 class="section-title">Wasted Beans by Origin</h2>
   <div id="wasteOriginSections"></div>
-</section>
 
-<!-- ===== MOVEMENTS (Store → Roastery transfers) ===== -->
+  <!-- RECENT ROASTS — STORE TRANSFER STATUS -->
+  <h2 class="section-title" style="margin-top:40px">📤 Store Transfer Status</h2>
+  <div class="recent-roasts-panel">
+    <h3>☕ Recent Roasts Sent to Store</h3>
+    <p class="text-muted small" style="margin-bottom:16px">Status updates live in real-time when the Store Manager accepts a delivery. Use the <strong>📤 Send to Store</strong> button in the roasting table above to broadcast a finished roast.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Date</th><th>Bean Name</th><th>Roasted Out (kg)</th><th>Roast Level</th><th>Reference No.</th><th>Transfer Status</th></tr></thead>
+        <tbody id="recentRoastsTable"><tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px">No roasts sent to the store yet.<br><span class="small">Click 📤 Send to Store on any roasting record above.</span></td></tr></tbody>
+      </table>
+    </div>
+  </div>
+  <!-- ACTIVE SHIPMENTS BLOCK -->
+  <h2 class="section-title" style="margin-top:40px">🚚 Active Shipments</h2>
+  <div class="active-shipments-block" id="activeShipmentsBlock">
+    <div class="shipments-empty shipment-pulse">Loading shipments…</div>
+  </div>
+
+  <!-- ROASTERY STOCK BY ORIGIN -->
+  <h2 class="section-title" style="margin-top:8px">🏭 Roastery Stock by Origin</h2>
+  <p class="text-muted small" style="margin-bottom:14px">Roasted beans currently available at the Roastery, broken down per origin. Automatically deducted each time a transfer is sent.</p>
+  <div class="roastery-origin-stock-block" id="roasteryOriginStockBlock">
+    <div class="shipments-empty">No roasted stock on record.</div>
+  </div>
+
+  <!-- TRANSFER HISTORY LOG -->
+  <h2 class="section-title" style="margin-top:8px">📋 Transfer History Log</h2>
+  <div class="history-log-block">
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Sent At</th><th>Origin</th><th>Bean Name</th><th>Weight</th><th>Roast Level</th><th>Status</th></tr></thead>
+        <tbody id="transferHistoryTable"><tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px">No transfer history yet.<br><span class="small">Records appear here once you send a roast to the store.</span></td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+</section>
 <section class="page" id="page-movements">
   <div class="page-header">
     <h2 class="page-title">Stock Movements</h2>
@@ -899,7 +1021,6 @@ body.theme-light .inv-chip{background:linear-gradient(135deg,#ffffff 0%,#fbf7ee 
       <div><label>Date</label><input type="date" id="mv-date"/></div>
       <div><label>Movement Type</label>
         <select id="mv-type">
-          <option value="store_to_roastery">Store → Roastery</option>
           <option value="store_to_store">Store → Store</option>
           <option value="adjustment">Inventory Adjustment</option>
         </select>
@@ -1092,17 +1213,7 @@ body.theme-light .inv-chip{background:linear-gradient(135deg,#ffffff 0%,#fbf7ee 
   <div class="settings-section">
     <h3>🎛 Dashboard Control Panel</h3>
     <p class="text-muted small" style="margin-bottom:18px">Core controls for how the dashboard looks and who's signed in.</p>
-    <div class="form-row three">
-      <div>
-        <label>Active Role</label>
-        <select id="roleSelect" onchange="setRole(this.value)">
-          <option value="Admin">Admin</option>
-          <option value="Manager">Manager</option>
-          <option value="Staff">Staff</option>
-          <option value="Storekeeper">Storekeeper</option>
-          <option value="Roaster">Roaster</option>
-        </select>
-      </div>
+    <div class="form-row">
       <div>
         <label>Theme</label>
         <select id="themeSelect" onchange="setTheme(this.value)">
@@ -1511,12 +1622,23 @@ const defaultData={
 };
 
 /* ---- Sync status helpers ---- */
+let _lastSyncedTime = null;
 function setSyncStatus(status, label){
   const el=document.getElementById('syncIndicator');
   const lb=document.getElementById('syncLabel');
   if(!el||!lb)return;
   el.className='sync-indicator '+status;
   lb.textContent=label;
+  if(status==='synced'){
+    _lastSyncedTime=new Date();
+    const lsl=document.getElementById('lastSyncedLabel');
+    if(lsl){
+      const h=String(_lastSyncedTime.getHours()).padStart(2,'0');
+      const m=String(_lastSyncedTime.getMinutes()).padStart(2,'0');
+      const s=String(_lastSyncedTime.getSeconds()).padStart(2,'0');
+      lsl.textContent=`Last sync ${h}:${m}:${s}`;
+    }
+  }
 }
 
 /* ---- Merge incoming Firebase snapshot with defaultData shape ---- */
@@ -1548,6 +1670,11 @@ function loadDataLocal(){
 /* Initialise from localStorage so UI is instant, then Firebase overwrites */
 let data = loadDataLocal();
 
+/* ERP — live list of transfer requests from Firebase */
+let roasteryTransferRequests = [];
+/* ERP — full history from Firebase */
+let roasteryHistory = [];
+
 /* ---- Firebase real-time listener — attaches after login ---- */
 let _fbListenerAttached = false;
 function attachFirebaseListener(){
@@ -1575,6 +1702,27 @@ function attachFirebaseListener(){
     } else {
       setSyncStatus('offline','OFFLINE');
     }
+  });
+
+  /* ERP — Listen to transfer_requests so Recent Roasts table shows live status */
+  db.ref(TRANSFER_REQUESTS_PATH).on('value', snapshot => {
+    roasteryTransferRequests = [];
+    const val = snapshot.val() || {};
+    Object.entries(val).forEach(([key, req]) => {
+      roasteryTransferRequests.push(Object.assign({}, req, {key}));
+    });
+    renderRecentRoasts();
+    renderActiveShipments();
+  });
+
+  /* ERP — Listen to roastery_history for the full Transfer History Log */
+  db.ref(ROASTERY_HISTORY_PATH).on('value', snapshot => {
+    roasteryHistory = [];
+    const val = snapshot.val() || {};
+    Object.entries(val).forEach(([key, entry]) => {
+      roasteryHistory.push(Object.assign({}, entry, {key}));
+    });
+    renderTransferHistoryLog();
   });
 }
 
@@ -1701,10 +1849,8 @@ function loadCustomColorsIntoUI(){
   });
 }
 function loadControlPanel(){
-  const r=document.getElementById('roleSelect');
   const t=document.getElementById('themeSelect');
   const ac=document.getElementById('accentSelect');
-  if(r)r.value=data.prefs.role||'Storekeeper';
   if(t)t.value=data.prefs.theme||'cream';
   if(ac)ac.value=data.prefs.accent||'coffee';
   loadCustomColorsIntoUI();
@@ -2212,6 +2358,291 @@ function deleteRoasting(id){
     saveData();renderAll();toast('Roasting record deleted, green beans restored');
   });
 }
+
+/* ===== ERP — SEND ROAST TO STORE ===== */
+function sendToStore(roastId){
+  const r=data.roasting.find(x=>x.id===roastId);
+  if(!r){toast('Roasting record not found','error');return;}
+  if(r.sentToStore){toast('Already sent to the store','warn');return;}
+
+  const beanName=(r.sourceBeanName||r.sourceOrigin||'').trim();
+  const origin=(r.sourceOrigin||'').trim();
+  if(!beanName){toast('Cannot send — no bean name on this record','error');return;}
+  if(!r.outKg||r.outKg<=0){toast('Roasted output is 0 kg — nothing to send','error');return;}
+
+  if(!confirm(`Send ${fmt(r.outKg)} kg of "${beanName}" (${origin}) to the Store?\n\nA transfer request will be broadcast live to the Store Dashboard.\nThe Roastery's ${origin} stock will be reduced by ${fmt(r.outKg)} kg.`))return;
+
+  /* Generate two new Firebase keys atomically */
+  const transferKey=db.ref(TRANSFER_REQUESTS_PATH).push().key;
+  const historyKey =db.ref(ROASTERY_HISTORY_PATH).push().key;
+
+  const transferData={
+    key:transferKey,
+    ts:new Date().toISOString(),
+    bean_name:beanName,
+    origin:origin,
+    weight:r.outKg,
+    unit:'kg',
+    roast_level:r.level||'',
+    notes:r.notes||'',
+    status:'pending',
+    roastery_id:roastId,
+    history_key:historyKey,
+    date:r.date||todayISO()
+  };
+  const historyData={
+    key:historyKey,
+    ts:new Date().toISOString(),
+    bean_name:beanName,
+    origin:origin,
+    weight:r.outKg,
+    roast_level:r.level||'',
+    transfer_key:transferKey,
+    status:'pending',
+    date:r.date||todayISO()
+  };
+
+  /* Multi-path atomic write */
+  const updates={};
+  updates[TRANSFER_REQUESTS_PATH+'/'+transferKey]=transferData;
+  updates[ROASTERY_HISTORY_PATH+'/'+historyKey]=historyData;
+
+  setSyncStatus('syncing','SAVING');
+  db.ref().update(updates)
+    .then(()=>{
+      /* Mark this roasting record as sent (persisted in dashboard/data) */
+      r.sentToStore=true;
+      r.transferKey=transferKey;
+      /* Generate a short human-readable reference for tracking */
+      const shortRef='TRF-'+transferKey.slice(-8).toUpperCase();
+      r.transferRef=shortRef;
+      /* ── STOCK DEDUCTION: reduce available roastery stock for this origin ── */
+      r.available=Math.max(0,(r.available!=null?r.available:r.outKg)-r.outKg);
+      saveData();
+      renderAll();
+      showTransferSuccess(beanName, origin, r.outKg, shortRef, new Date().toISOString());
+    })
+    .catch(err=>{
+      setSyncStatus('offline','OFFLINE');
+      toast('Send failed: '+(err.message||'Firebase error'),'error');
+    });
+}
+
+/* ===== TRANSFER SUCCESS BANNER ===== */
+function showTransferSuccess(beanName, origin, weight, refCode, isoTime){
+  const banner=document.getElementById('transferSuccessBanner');
+  if(!banner)return;
+  document.getElementById('tsbRefCode').textContent=refCode;
+  document.getElementById('tsbBean').textContent=beanName||'—';
+  document.getElementById('tsbOrigin').textContent=origin||'—';
+  document.getElementById('tsbWeight').textContent=fmt(weight)+' kg';
+  document.getElementById('tsbTime').textContent=formatTimestamp(isoTime||new Date().toISOString());
+  banner.classList.add('show');
+  /* Auto-dismiss after 12 seconds — long enough to note the ref number */
+  clearTimeout(banner._autoHide);
+  banner._autoHide=setTimeout(()=>banner.classList.remove('show'),12000);
+}
+
+/* ===== MANUAL SYNC ===== */
+function manualSync(){
+  const btn=document.getElementById('syncRefreshBtn');
+  if(btn){btn.classList.add('spinning');btn.disabled=true;}
+  setSyncStatus('syncing','SYNCING');
+  Promise.all([
+    db.ref(FB_PATH).once('value'),
+    db.ref(TRANSFER_REQUESTS_PATH).once('value'),
+    db.ref(ROASTERY_HISTORY_PATH).once('value')
+  ]).then(([snap, trSnap, histSnap])=>{
+    const fbData=snap.val();
+    if(fbData){
+      data=mergeData(fbData);
+      try{localStorage.setItem(KEY,JSON.stringify(data));}catch(e){}
+    }
+    roasteryTransferRequests=[];
+    const trVal=trSnap.val()||{};
+    Object.entries(trVal).forEach(([key,req])=>{roasteryTransferRequests.push(Object.assign({},req,{key}));});
+    roasteryHistory=[];
+    const histVal=histSnap.val()||{};
+    Object.entries(histVal).forEach(([key,entry])=>{roasteryHistory.push(Object.assign({},entry,{key}));});
+    renderAll();
+    setSyncStatus('synced','SYNCED');
+    toast('✓ Dashboard synced with latest data');
+    if(btn){btn.classList.remove('spinning');btn.disabled=false;}
+  }).catch(err=>{
+    setSyncStatus('offline','OFFLINE');
+    toast('Sync failed: '+(err.message||'Connection error'),'error');
+    if(btn){btn.classList.remove('spinning');btn.disabled=false;}
+  });
+}
+
+/* ===== ERP — RENDER RECENT ROASTS TABLE ===== */
+function renderRecentRoasts(){
+  const tbody=document.getElementById('recentRoastsTable');
+  if(!tbody)return;
+
+  const sentRoasts=data.roasting.filter(r=>r.sentToStore&&r.transferKey);
+  if(sentRoasts.length===0){
+    tbody.innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px">No roasts sent to the store yet.<br><span class="small">Click 📤 Send to Store on any roasting record above.</span></td></tr>';
+    return;
+  }
+
+  /* Sort newest first */
+  const sorted=[...sentRoasts].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+
+  tbody.innerHTML=sorted.map(r=>{
+    const tr=roasteryTransferRequests.find(x=>x.key===r.transferKey);
+    const status=tr?tr.status:(r.sentToStore?'pending':'unsent');
+    let statusHtml;
+    if(status==='completed'){
+      statusHtml=`<span class="badge confirmed">✅ Confirmed by Store</span>`;
+    }else if(status==='pending'){
+      statusHtml=`<span class="badge teal-pulse">⏳ Pending Store Review</span>`;
+    }else{
+      statusHtml=`<span class="badge gold">? Unknown</span>`;
+    }
+    const refHtml=r.transferRef
+      ?`<span style="font-family:'Roboto Mono',monospace;font-size:11px;color:var(--teal);letter-spacing:.5px">${escapeHtml(r.transferRef)}</span>`
+      :`<span class="text-muted small">—</span>`;
+    return `<tr>
+      <td>${formatDate(r.date||'')}</td>
+      <td><strong>${escapeHtml(r.sourceBeanName||r.sourceOrigin||'—')}</strong></td>
+      <td class="text-green">${fmt(r.outKg)} kg</td>
+      <td><span class="badge gold">${escapeHtml(r.level||'—')}</span></td>
+      <td>${refHtml}</td>
+      <td>${statusHtml}</td>
+    </tr>`;
+  }).join('');
+}
+
+/* ===== ERP — ACTIVE SHIPMENTS (in-flight, pending acceptance) ===== */
+function renderActiveShipments(){
+  const block=document.getElementById('activeShipmentsBlock');
+  if(!block)return;
+  const pending=roasteryTransferRequests.filter(t=>t.status==='pending');
+  if(pending.length===0){
+    block.innerHTML='<div class="shipments-empty">✅ No active shipments — all transfers have been confirmed by the store.</div>';
+    return;
+  }
+  const sorted=[...pending].sort((a,b)=>(b.ts||'').localeCompare(a.ts||''));
+  block.innerHTML=`
+    <div class="block-header">
+      <span class="block-title">In Transit</span>
+      <span class="shipment-count-badge shipment-pulse">${pending.length}</span>
+      <span class="text-muted small" style="margin-left:6px">shipment${pending.length===1?'':'s'} awaiting store acceptance</span>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Origin</th><th>Bean Name</th><th>Weight</th><th>Sent At</th><th>Roast Level</th><th>Status</th></tr></thead>
+        <tbody>
+          ${sorted.map(t=>`
+            <tr>
+              <td><strong style="color:var(--heading)">${escapeHtml(t.origin||t.bean_name||'—')}</strong></td>
+              <td>${escapeHtml(t.bean_name||'—')}</td>
+              <td class="text-gold"><strong>${fmt(t.weight||0)} kg</strong></td>
+              <td class="text-muted small">${formatTimestamp(t.ts)}</td>
+              <td><span class="badge gold">${escapeHtml(t.roast_level||'—')}</span></td>
+              <td><span class="badge teal-pulse">⏳ Pending</span></td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+/* ===== ERP — ROASTERY STOCK BY ORIGIN (after deductions) ===== */
+function renderRoasteryOriginStock(){
+  const block=document.getElementById('roasteryOriginStockBlock');
+  if(!block)return;
+
+  /* Aggregate available roasted stock per origin from roasting records */
+  const byOrigin={};
+  data.roasting.forEach(r=>{
+    const o=r.sourceOrigin||'Unknown';
+    if(!byOrigin[o])byOrigin[o]={available:0,sent:0,total:0};
+    const avail=(r.available!=null?r.available:r.outKg);
+    byOrigin[o].available+=avail;
+    byOrigin[o].sent+=Math.max(0,r.outKg-avail);
+    byOrigin[o].total+=r.outKg;
+  });
+
+  const entries=Object.entries(byOrigin).sort((a,b)=>b[1].available-a[1].available);
+  if(entries.length===0){
+    block.innerHTML='<div class="shipments-empty">No roasted beans on record yet. Log a roasting batch first.</div>';
+    return;
+  }
+
+  const maxVal=Math.max(...entries.map(([,v])=>v.total),1);
+  block.innerHTML=entries.map(([origin,v])=>`
+    <div class="ros-origin-row">
+      <div>
+        <div class="ros-origin-name">${escapeHtml(origin)}</div>
+        <div class="ros-origin-meta">Total roasted: ${fmt(v.total)} kg</div>
+      </div>
+      <div class="ros-bar-wrap">
+        <div class="stock-bar-track">
+          <div class="stock-bar-fill tan" style="width:${(v.available/maxVal)*100}%"></div>
+        </div>
+        <div class="ros-sent-label">Sent to store: ${fmt(v.sent)} kg</div>
+      </div>
+      <div class="ros-avail-val">${fmt(v.available)} kg</div>
+      <div>${v.available<=0?'<span class="badge red">Depleted</span>':v.available<v.total*0.2?'<span class="badge gold">Low</span>':'<span class="badge green">In Stock</span>'}</div>
+    </div>`).join('');
+}
+
+/* ===== ERP — TRANSFER HISTORY LOG (all sends, live from Firebase) ===== */
+function renderTransferHistoryLog(){
+  const tbody=document.getElementById('transferHistoryTable');
+  if(!tbody)return;
+
+  /* Merge Firebase history with live pending statuses */
+  if(roasteryHistory.length===0&&roasteryTransferRequests.length===0){
+    tbody.innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px">No transfer history yet.<br><span class="small">Records appear here once you send a roast to the store.</span></td></tr>';
+    return;
+  }
+
+  /* Build combined list: prefer roasteryHistory (full log); supplement with any requests not yet in history */
+  const histMap={};
+  roasteryHistory.forEach(h=>{histMap[h.transfer_key||h.key]=h;});
+
+  /* Merge live status from roasteryTransferRequests */
+  const merged=[...roasteryHistory].map(h=>{
+    const live=roasteryTransferRequests.find(t=>t.key===h.transfer_key);
+    return {...h, status:(live?live.status:h.status)||'pending'};
+  });
+
+  /* Add any pending requests not yet in history (edge case) */
+  roasteryTransferRequests.forEach(t=>{
+    if(!histMap[t.key]){
+      merged.push({ts:t.ts,bean_name:t.bean_name,origin:t.origin||t.bean_name||'—',weight:t.weight,roast_level:t.roast_level,status:t.status,transfer_key:t.key});
+    }
+  });
+
+  const sorted=[...merged].sort((a,b)=>(b.ts||'').localeCompare(a.ts||''));
+
+  tbody.innerHTML=sorted.map(entry=>{
+    const st=entry.status;
+    let statusHtml;
+    if(st==='completed')statusHtml='<span class="badge accepted">✅ Accepted</span>';
+    else if(st==='pending')statusHtml='<span class="badge teal-pulse">⏳ Pending</span>';
+    else statusHtml=`<span class="badge gold">${escapeHtml(st||'?')}</span>`;
+    return `<tr>
+      <td class="text-muted small">${formatTimestamp(entry.ts)}</td>
+      <td><strong>${escapeHtml(entry.origin||'—')}</strong></td>
+      <td>${escapeHtml(entry.bean_name||'—')}</td>
+      <td class="text-gold"><strong>${fmt(entry.weight||0)} kg</strong></td>
+      <td>${escapeHtml(entry.roast_level||'—')}</td>
+      <td>${statusHtml}</td>
+    </tr>`;
+  }).join('');
+}
+
+/* Timestamp formatter: ISO → human-readable "22 Apr 2026, 14:35" */
+function formatTimestamp(iso){
+  if(!iso)return'—';
+  const d=new Date(iso);
+  if(isNaN(d.getTime()))return iso;
+  return d.toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+}
+
 function editRoasting(id){
   requirePassword('Edit Roasting Record', 'Password required to modify roasting records.', ()=>{
     _doEditRoasting(id);
@@ -2288,9 +2719,16 @@ function renderRoasting(){
                 <td class="text-red">${fmt(r.wasteKg)} kg</td>
                 <td><span class="badge ${r.wastePct>15?'red':r.wastePct<10?'green':'gold'}">${r.wastePct.toFixed(1)}%</span></td>
                 <td>${fmt(r.available)} kg</td>
-                <td><div style="display:flex;gap:6px">
+                <td><div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center">
                   <button class="btn btn-xs btn-secondary" onclick="editRoasting('${r.id}')">Edit</button>
                   <button class="btn btn-xs btn-danger" onclick="deleteRoasting('${r.id}')">Remove</button>
+                  ${(()=>{
+                    const tr = r.transferKey ? roasteryTransferRequests.find(x=>x.key===r.transferKey) : null;
+                    const st = tr ? tr.status : (r.sentToStore ? 'pending' : 'unsent');
+                    if(st==='unsent') return `<button class="btn-send" onclick="sendToStore('${r.id}')">📤 Send</button>`;
+                    if(st==='completed') return `<span class="badge confirmed" style="font-size:10px">✅ Confirmed</span>`;
+                    return `<span class="badge teal-pulse" style="font-size:10px">⏳ Pending</span>`;
+                  })()}
                 </div></td>
               </tr>`).join('')}
             </tbody>
@@ -2423,7 +2861,7 @@ function clearMVForm(){
   document.getElementById('mv-source').value='';
   document.getElementById('mv-kg').value='';
   document.getElementById('mv-notes').value='';
-  document.getElementById('mv-type').value='store_to_roastery';
+  document.getElementById('mv-type').value='store_to_store';
   refreshMVDestination();
 }
 function deleteMovement(id){
@@ -2593,10 +3031,9 @@ function renderOriginCards(){
   const grid=document.getElementById('originCards');
   const map={};
   data.greenBeans.forEach(g=>{
-    if(!map[g.origin])map[g.origin]={origin:g.origin,supplier:g.supplier,beanNames:new Set(),totalReceived:0,remaining:0,stores:new Set()};
+    if(!map[g.origin])map[g.origin]={origin:g.origin,supplier:g.supplier,beanNames:new Set(),totalReceived:0,remaining:0};
     map[g.origin].totalReceived+=g.kg;
     map[g.origin].remaining+=g.remaining;
-    if(g.storeName)map[g.origin].stores.add(g.storeName);
     if(g.beanName)map[g.origin].beanNames.add(g.beanName);
   });
   const wasteMap={};
@@ -2612,7 +3049,6 @@ function renderOriginCards(){
   }
   grid.innerHTML=entries.map(e=>{
     const w=wasteMap[e.origin]||{roasted:0,waste:0};
-    const storeList=[...e.stores];
     const beanNameList=[...e.beanNames];
     return `<div class="origin-card">
       <div class="origin-header">
@@ -2628,7 +3064,6 @@ function renderOriginCards(){
         <div class="origin-stat roast"><div class="origin-stat-val">${fmt(w.roasted)}<span style="font-size:12px;color:var(--muted)"> kg</span></div><div class="origin-stat-lbl">Roasted</div></div>
         <div class="origin-stat waste"><div class="origin-stat-val">${fmt(w.waste)}<span style="font-size:12px;color:var(--muted)"> kg</span></div><div class="origin-stat-lbl">Wasted</div></div>
       </div>
-      ${storeList.length>0?`<div class="origin-stores">${storeList.map(s=>`<span class="badge blue">${escapeHtml(s)}</span>`).join('')}</div>`:''}
     </div>`;
   }).join('');
 }
@@ -3164,6 +3599,10 @@ function renderAll(){
   renderRoastLevels();
   renderInventoryLists();
   renderReports();
+  renderRecentRoasts();
+  renderActiveShipments();
+  renderRoasteryOriginStock();
+  renderTransferHistoryLog();
 
   // Restore focus if the element still exists after re-render
   if(activeId){
