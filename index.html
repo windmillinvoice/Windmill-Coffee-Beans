@@ -1118,7 +1118,7 @@ body.theme-dark #alert-log-panel{box-shadow:0 16px 48px rgba(0,0,0,.45);}
       <h3>Recent Green Bean Deliveries</h3>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Date</th><th>Origin / Bean</th><th>Store</th><th>Qty</th></tr></thead>
+          <thead><tr><th>Date</th><th>Origin / Bean</th><th>Store / Route</th><th>Qty</th></tr></thead>
           <tbody id="recentGreen"></tbody>
         </table>
       </div>
@@ -1847,11 +1847,13 @@ updateClock();
 const AUTH_KEY='windmill_auth_v1';
 function getAuth(){try{const r=localStorage.getItem(AUTH_KEY);if(!r)return{username:'admin',password:'windmill2024'};return JSON.parse(r);}catch(e){return{username:'admin',password:'windmill2024'};}}
 function saveAuth(a){localStorage.setItem(AUTH_KEY,JSON.stringify(a));}
+const SESSION_KEY='windmill_session_v1';
 function doLogin(){
   const u=document.getElementById('loginUser').value.trim();
   const p=document.getElementById('loginPass').value;
   const auth=getAuth();
   if(u===auth.username&&p===auth.password){
+    sessionStorage.setItem(SESSION_KEY,JSON.stringify({username:u}));
     document.getElementById('loginOverlay').style.display='none';
     document.getElementById('appShell').style.display='block';
     document.getElementById('loginError').classList.remove('show');
@@ -1864,11 +1866,23 @@ function doLogin(){
 }
 function doLogout(){
   if(!confirm('Sign out?'))return;
+  sessionStorage.removeItem(SESSION_KEY);
   document.getElementById('appShell').style.display='none';
   document.getElementById('loginOverlay').style.display='flex';
   document.getElementById('loginUser').value='';document.getElementById('loginPass').value='';
   document.getElementById('loginError').classList.remove('show');
 }
+/* Auto-restore session on page load/refresh */
+(function checkSession(){
+  try{
+    const s=sessionStorage.getItem(SESSION_KEY);
+    if(s){
+      document.getElementById('loginOverlay').style.display='none';
+      document.getElementById('appShell').style.display='block';
+      init();
+    }
+  }catch(e){}
+})();
 function changePassword(){
   const cur=document.getElementById('s-cur-pass').value;
   const nw=document.getElementById('s-new-pass').value;
@@ -2538,7 +2552,7 @@ function renderGreenBeans(){
     return rb-ra;
   }).map(([origin,beans])=>{
     const totalRem=beans.reduce((s,g)=>s+g.remaining,0);
-    const totalRec=beans.reduce((s,g)=>s+g.kg,0);
+    const totalRec=beans.filter(g=>!g.isTransfer).reduce((s,g)=>s+g.kg,0);
     const suppliers=[...new Set(beans.map(g=>g.supplier))];
     return `<div class="origin-section">
       <div class="origin-section-header">
@@ -2553,13 +2567,16 @@ function renderGreenBeans(){
         <p class="text-muted small" style="margin-bottom:12px">Suppliers: ${suppliers.map(s=>`<span class="badge blue">${escapeHtml(s)}</span>`).join(' ')}</p>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Date</th><th>Bean Name</th><th>Supplier</th><th>Store</th><th>Received</th><th>Remaining</th><th>Batch</th><th>Actions</th></tr></thead>
+            <thead><tr><th>Date</th><th>Bean Name</th><th>Supplier</th><th>Store / Route</th><th>Received</th><th>Remaining</th><th>Batch</th><th>Actions</th></tr></thead>
             <tbody>${beans.map(g=>`
               <tr>
                 <td>${formatDate(g.date)}</td>
                 <td>${g.beanName?`<strong>${escapeHtml(g.beanName)}</strong>`:'<span class="text-muted">—</span>'}</td>
                 <td>${escapeHtml(g.supplier)}</td>
-                <td><span class="badge blue">${escapeHtml(g.storeName||'—')}</span></td>
+                <td>${g.isTransfer
+                  ?`<span class="badge teal" style="font-size:10px">↔ Transfer</span><br><span class="text-muted small" style="white-space:nowrap">${escapeHtml(g.fromStoreName||'?')} → ${escapeHtml(g.storeName||'?')}</span>`
+                  :`<span class="badge blue">${escapeHtml(g.storeName||'—')}</span>`
+                }</td>
                 <td>${fmt(g.kg)} kg</td>
                 <td><span class="badge ${g.remaining<=0?'red':g.remaining<g.kg*0.2?'gold':'green'}">${fmt(g.remaining)} kg</span></td>
                 <td class="text-muted small">${escapeHtml(g.batch||'—')}</td>
@@ -3146,22 +3163,30 @@ function addMovement(){
   // Deduct from source
   source.remaining-=kg;
 
-  // For store→store we create a *new* green bean record at the destination so balances follow
+  // Pre-generate the movement ID so we can cross-link the destination bean record
+  const movId=uid();
+  let destBeanId=null;
+
+  // For store→store: create a transfer bean record at the destination
+  // IMPORTANT: flagged isTransfer:true so it is NEVER counted as new received stock.
+  // Total stock across all stores stays unchanged — only per-store balances shift.
   if(type==='store_to_store'){
     const ds=data.stores.find(s=>s.id===destVal);
+    destBeanId=uid();
     data.greenBeans.unshift({
-      id:uid(),date,supplier:source.supplier,origin:source.origin,beanName:source.beanName,
+      id:destBeanId,date,supplier:source.supplier,origin:source.origin,beanName:source.beanName,
       kg,storeId:destVal,storeName:ds?ds.name:'—',batch:(source.batch||'')+'-TRF',
-      cost:0,notes:'Transferred from '+(source.storeName||'?'),remaining:kg
+      cost:0,notes:'Transferred from '+(source.storeName||'?'),remaining:kg,
+      isTransfer:true,movementId:movId,fromStoreName:source.storeName||'?'   // internal transfer — excluded from received totals
     });
   }
 
   data.movements.unshift({
-    id:uid(),date,type,sourceId,
+    id:movId,date,type,sourceId,
     sourceName:`${source.origin}${source.beanName?' — '+source.beanName:''}`,
     sourceOrigin:source.origin,sourceBeanName:source.beanName||'',
     fromStore:source.storeName||'—',toStore:destLabel,
-    kg,notes
+    kg,notes,destBeanId   // destBeanId used to clean up the transfer record on delete
   });
   saveData();clearMVForm();renderAll();
   toast(`${fmt(kg)} kg moved: ${source.storeName||'?'} → ${destLabel}`);
@@ -3175,14 +3200,59 @@ function clearMVForm(){
   refreshMVDestination();
 }
 function deleteMovement(id){
-  if(!confirm('Delete this movement? Source balance will be restored. (Any transferred stock rows will remain — delete them separately if needed.)'))return;
-  const m=data.movements.find(x=>x.id===id);
-  if(m){
+  requirePassword('Remove Movement Record','Password required to delete this movement. The source balance will be restored.', ()=>{
+    const m=data.movements.find(x=>x.id===id);
+    if(m){
+      // Restore quantity to the source batch
+      const src=data.greenBeans.find(g=>g.id===m.sourceId);
+      if(src)src.remaining+=m.kg;
+      // Remove the destination transfer bean record (store_to_store only)
+      if(m.type==='store_to_store'&&m.destBeanId){
+        data.greenBeans=data.greenBeans.filter(g=>g.id!==m.destBeanId);
+      }
+    }
+    data.movements=data.movements.filter(x=>x.id!==id);
+    saveData();renderAll();toast('Movement deleted','warn');
+  });
+}
+function editMovement(id){
+  requirePassword('Edit Movement Record','Password required to modify movement records.', ()=>{
+    _doEditMovement(id);
+  });
+}
+function _doEditMovement(id){
+  const m=data.movements.find(x=>x.id===id);if(!m)return;
+  const typeOpts=[
+    {v:'store_to_store',l:'Store → Store'},
+    {v:'store_to_roastery',l:'Store → Roastery'},
+    {v:'adjustment',l:'Inventory Adjustment'}
+  ].map(o=>`<option value="${o.v}"${m.type===o.v?' selected':''}>${o.l}</option>`).join('');
+  document.getElementById('editModalTitle').textContent='Edit Movement Record';
+  document.getElementById('editModalBody').innerHTML=`
+    <div class="form-row"><div><label>Date</label><input type="date" id="em-mv-date" value="${m.date}"/></div>
+    <div><label>Movement Type</label><select id="em-mv-type">${typeOpts}</select></div></div>
+    <div class="form-row"><div><label>From Store</label><input type="text" id="em-mv-from" value="${escapeHtml(m.fromStore||'')}"/></div>
+    <div><label>To Store / Destination</label><input type="text" id="em-mv-to" value="${escapeHtml(m.toStore||'')}"/></div></div>
+    <div class="form-row"><div><label>Quantity (kg)</label><input type="number" id="em-mv-kg" value="${m.kg}" step="0.1" min="0"/></div>
+    <div><label>Reference / Notes</label><input type="text" id="em-mv-notes" value="${escapeHtml(m.notes||'')}"/></div></div>
+    <p class="text-muted small" style="margin-top:8px">⚠️ Editing quantity will adjust the source batch remaining stock accordingly.</p>
+  `;
+  document.getElementById('editModalSave').onclick=()=>{
+    const newKg=parseFloat(document.getElementById('em-mv-kg').value);
+    if(isNaN(newKg)||newKg<=0){toast('Enter a valid quantity','error');return;}
+    const diff=newKg-m.kg;
+    // Adjust source batch remaining
     const src=data.greenBeans.find(g=>g.id===m.sourceId);
-    if(src)src.remaining+=m.kg;
-  }
-  data.movements=data.movements.filter(x=>x.id!==id);
-  saveData();renderAll();toast('Movement deleted','warn');
+    if(src)src.remaining=Math.max(0,src.remaining-diff);
+    m.date=document.getElementById('em-mv-date').value||m.date;
+    m.type=document.getElementById('em-mv-type').value;
+    m.fromStore=document.getElementById('em-mv-from').value.trim()||m.fromStore;
+    m.toStore=document.getElementById('em-mv-to').value.trim()||m.toStore;
+    m.notes=document.getElementById('em-mv-notes').value.trim();
+    m.kg=newKg;
+    saveData();renderAll();closeEditModal();toast('Movement updated');
+  };
+  document.getElementById('editModal').classList.add('show');
 }
 function renderMovements(){
   populateMVDropdowns();
@@ -3214,7 +3284,7 @@ function renderMovements(){
       <td>${escapeHtml(m.toStore||'—')}</td>
       <td><strong>${fmt(m.kg)} kg</strong></td>
       <td class="text-muted small">${escapeHtml(m.notes||'—')}</td>
-      <td><button class="btn btn-xs btn-danger" onclick="deleteMovement('${m.id}')">Remove</button></td>
+      <td style="white-space:nowrap;display:flex;gap:6px"><button class="btn btn-xs btn-secondary" onclick="editMovement('${m.id}')">✏️ Edit</button><button class="btn btn-xs btn-danger" onclick="deleteMovement('${m.id}')">🗑 Remove</button></td>
     </tr>
   `).join('');
 }
@@ -3342,7 +3412,7 @@ function renderOriginCards(){
   const map={};
   data.greenBeans.forEach(g=>{
     if(!map[g.origin])map[g.origin]={origin:g.origin,supplier:g.supplier,beanNames:new Set(),totalReceived:0,remaining:0};
-    map[g.origin].totalReceived+=g.kg;
+    if(!g.isTransfer) map[g.origin].totalReceived+=g.kg;
     map[g.origin].remaining+=g.remaining;
     if(g.beanName)map[g.origin].beanNames.add(g.beanName);
   });
@@ -3411,7 +3481,7 @@ function renderDashRoastOrigins(){
 function renderKPIs(){
   const greenTotal=data.greenBeans.reduce((s,g)=>s+g.remaining,0);
   const roastedReady=data.roasting.reduce((s,r)=>s+r.available,0);
-  const totalReceived=data.greenBeans.reduce((s,g)=>s+g.kg,0);
+  const totalReceived=data.greenBeans.filter(g=>!g.isTransfer).reduce((s,g)=>s+g.kg,0);
   const totalRoastedOut=data.roasting.reduce((s,r)=>s+r.outKg,0);
   const inTotal=data.roasting.reduce((s,r)=>s+r.inKg,0);
   const wasteTotal=data.roasting.reduce((s,r)=>s+r.wasteKg,0);
@@ -3458,7 +3528,10 @@ function renderKPIs(){
     :data.greenBeans.slice(0,6).map(g=>`<tr>
       <td>${formatDate(g.date)}</td>
       <td class="small"><strong>${escapeHtml(g.origin)}</strong>${g.beanName?'<br><span class="text-muted">'+escapeHtml(g.beanName)+'</span>':''}</td>
-      <td><span class="badge blue">${escapeHtml(g.storeName||'—')}</span></td>
+      <td>${g.isTransfer
+        ?`<span class="badge teal" style="font-size:10px">↔ Transfer</span><br><span class="text-muted small" style="white-space:nowrap">${escapeHtml(g.fromStoreName||'?')} → ${escapeHtml(g.storeName||'?')}</span>`
+        :`<span class="badge blue">${escapeHtml(g.storeName||'—')}</span>`
+      }</td>
       <td>${fmt(g.kg)} kg</td>
     </tr>`).join('');
   renderWeekChart();
@@ -3645,7 +3718,7 @@ function renderReports(){
 
   // Store balances
   document.getElementById('rep-stores').innerHTML=getAllStoreBalances().map(s=>{
-    const received=data.greenBeans.filter(g=>g.storeId===s.id&&g.date>=from&&g.date<=to).reduce((x,g)=>x+g.kg,0);
+    const received=data.greenBeans.filter(g=>g.storeId===s.id&&g.date>=from&&g.date<=to&&!g.isTransfer).reduce((x,g)=>x+g.kg,0);
     return `<tr><td><strong>${escapeHtml(s.name)}</strong><br><span class="text-muted small">${escapeHtml(s.location)}</span></td>
       <td>${fmt(received)} kg</td><td class="text-gold"><strong>${fmt(s.balance)} kg</strong></td></tr>`;
   }).join('');
