@@ -1,0 +1,3212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Windmill Cafe &amp; Roastery — Dashboard</title>
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyCqS-QV9UfCSF0pJ3Ft4d9MjmboV2J4ZBE",
+    authDomain: "windmill-beans.firebaseapp.com",
+    databaseURL: "https://windmill-beans-default-rtdb.firebaseio.com/",
+    projectId: "windmill-beans",
+    storageBucket: "windmill-beans.appspot.com",
+    messagingSenderId: "windmill-beans",
+    appId: "windmill-beans"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+  const FB_PATH = 'dashboard/data';
+</script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:wght@500;600;700&family=Inter:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&family=Montserrat:wght@400;500;600;700&family=Lato:wght@400;700&family=Roboto+Mono:wght@500;700&family=DM+Serif+Display&family=Libre+Caslon+Text:wght@400;700&display=swap');
+:root{
+  /* Warm cream / coffee-brown palette — matches design reference */
+  --bg:#f4ece0;
+  --panel:#fbf5e8;
+  --panel-2:#f8f0de;
+  --panel-3:#ede2cd;
+  --line:#e0d3b6;
+  --text:#3a2c1e;
+  --muted:#8a7560;
+  --heading:#2a1a0a;
+  /* Coffee browns */
+  --coffee-dark:#2e1a0a;
+  --coffee:#4a2a0f;
+  --coffee-mid:#5c3819;
+  --coffee-light:#8a5a2f;
+  /* Accents */
+  --gold:#b08e4a;
+  --gold-2:#8a6f2f;
+  --gold-3:#c9a85a;
+  --gold-dim:rgba(176,142,74,.12);
+  --green:#6ba05a;
+  --green-2:#4e8040;
+  --green-dim:rgba(107,160,90,.15);
+  --red:#c24d3a;
+  --red-dim:rgba(194,77,58,.1);
+  --blue:#4a6b8a;
+  --blue-dim:rgba(74,107,138,.1);
+  --purple:#8a6b9c;
+  --purple-dim:rgba(138,107,156,.1);
+  --teal:#5a9080;
+  --teal-dim:rgba(90,144,128,.1);
+  --tan:#b5885c;
+  --tan-track:#d8cbae;
+  --cream:#3a2c1e;
+  --radius:14px;
+  /* Unified typography */
+  --font-body:'Inter',sans-serif;
+  --font-head:'Playfair Display',serif;
+  --font-num:'Playfair Display',serif;
+  --font-scale:1;
+}
+/* DARK (coffee night) THEME — optional via toggle */
+body.theme-dark{
+  --bg:#1a1208;
+  --panel:#261a0d;
+  --panel-2:#2e2012;
+  --panel-3:#3a2a18;
+  --line:#4a3722;
+  --text:#e8dcc5;
+  --muted:#9a8568;
+  --heading:#f5ecd5;
+  --coffee-dark:#0f0805;
+  --coffee:#2a1a0a;
+  --coffee-mid:#3d2817;
+  --coffee-light:#8a5a2f;
+  --cream:#f5ecd5;
+  --tan-track:#3a2a18;
+  --gold-dim:rgba(201,168,90,.15);
+  --green-dim:rgba(107,160,90,.18);
+  --red-dim:rgba(194,77,58,.18);
+  --blue-dim:rgba(116,150,185,.18);
+}
+body.theme-dark ::-webkit-scrollbar-track{background:var(--panel-3)}
+/* Fix hardcoded white/light inputs in dark mode */
+body.theme-dark input,body.theme-dark select,body.theme-dark textarea{background:var(--panel-2);color:var(--text);border-color:var(--line)}
+body.theme-dark input:focus,body.theme-dark select:focus,body.theme-dark textarea:focus{background:var(--panel-3);border-color:var(--gold-3)}
+body.theme-dark select option{background:var(--panel-2);color:var(--text)}
+body.theme-dark .toast{background:var(--panel);color:var(--text);border-color:var(--line)}
+body.theme-dark .modal{background:var(--panel)}
+body.theme-dark .login-box{background:var(--panel);border-color:var(--line)}
+body.theme-dark .login-field input{background:var(--panel-2)}
+body.theme-dark .login-field input:focus{background:var(--panel-3)}
+body.theme-dark .kpi.hero{background:var(--coffee-dark);border-color:var(--coffee)}
+body.theme-dark .flow-card.hero{background:var(--coffee-dark);border-color:var(--coffee)}
+body.theme-dark .btn{background:var(--gold);color:#1a1208}
+body.theme-dark .btn:hover{background:var(--gold-3)}
+body.theme-dark .btn-secondary{background:var(--panel-2);color:var(--text);border-color:var(--line)}
+body.theme-dark .btn-secondary:hover{background:var(--panel-3);color:var(--gold-3)}
+body.theme-dark .rtab.active{background:var(--gold);color:#1a1208}
+body.theme-dark .login-btn{background:var(--gold);color:#1a1208}
+body.theme-dark .login-btn:hover{background:var(--gold-3)}
+body.theme-dark .bean-flow .flow-card{background:var(--panel-2)}
+body.theme-dark .stock-bar-track{background:var(--panel-3)}
+
+/* ===== ACCENT VARIANTS ===== */
+body[data-accent="gold"]{--coffee:#8a6f2f;--coffee-dark:#5a4820;--coffee-mid:#b08e4a;--gold:#c9a85a;--gold-2:#a47518}
+body[data-accent="forest"]{--coffee:#2d4a2f;--coffee-dark:#1a2f1c;--coffee-mid:#3d5a40;--gold:#7a9a5a;--gold-2:#4e8040}
+body[data-accent="slate"]{--coffee:#2f3d4a;--coffee-dark:#1a242f;--coffee-mid:#3d5466;--gold:#4a6b8a;--gold-2:#2f4f6b}
+body[data-accent="burgundy"]{--coffee:#5a2a2f;--coffee-dark:#3d1a1f;--coffee-mid:#7a3d43;--gold:#a85a5f;--gold-2:#8a3f44}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;scroll-behavior:smooth}
+body{font-family:var(--font-body);background:var(--bg);color:var(--text);line-height:1.5;min-height:100vh;overflow-x:hidden;font-size:calc(14.5px * var(--font-scale));transition:background .3s ease,color .3s ease}
+header,nav.tabs,main{position:relative;z-index:1}
+h1,h2,h3,h4,h5,h6,.section-title,.origin-name,.origin-section-title,.store-name,.roast-origin-name{font-family:var(--font-head)}
+.kpi-value,.store-big-num,.origin-stat-val,.calc-cell-value,.origin-kpi-chip-val,.roast-stat-mini-val,.clock-time{font-family:var(--font-num)}
+
+/* ===== CUSTOM COLOR PICKERS ===== */
+.color-picker-row{display:flex;gap:8px;align-items:center}
+.color-picker-row input[type="color"]{width:44px;height:38px;padding:2px;cursor:pointer;border:1px solid var(--line);border-radius:8px;background:#fff;flex-shrink:0}
+.color-picker-row input[type="color"]::-webkit-color-swatch-wrapper{padding:0}
+.color-picker-row input[type="color"]::-webkit-color-swatch{border:none;border-radius:4px}
+.color-picker-row input[type="text"]{flex:1;font-family:'Roboto Mono',monospace;font-size:12.5px;text-transform:uppercase;letter-spacing:.5px}
+
+/* ===== LOW STOCK ALERTS ===== */
+.stock-alerts{display:flex;flex-direction:column;gap:8px;margin-bottom:24px}
+.stock-alert{padding:12px 18px;border-radius:10px;font-family:var(--font-body);font-size:13.5px;font-weight:500;display:flex;align-items:center;gap:10px;border-left:4px solid}
+.stock-alert.critical{background:var(--red-dim);border-left-color:var(--red);color:var(--red)}
+.stock-alert.warn{background:var(--gold-dim);border-left-color:var(--gold);color:var(--gold-2)}
+.alert-icon{font-size:16px}
+body.theme-dark .stock-alert.warn{color:var(--gold-3)}
+
+/* ===== SCROLLBAR ===== */
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-track{background:var(--panel-3)}
+::-webkit-scrollbar-thumb{background:var(--gold);border-radius:4px;border:2px solid var(--panel-3)}
+::-webkit-scrollbar-thumb:hover{background:var(--gold-2)}
+
+/* ===== ANIMATED WINDMILL LOGO ===== */
+.wm-logo{position:relative;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.wm-blades{transform-origin:50% 50%;animation:spin 8s linear infinite}
+.wm-blades-slow{animation-duration:14s}
+.wm-blades-login{animation-duration:6s}
+@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+.wm-glow{filter:drop-shadow(0 0 8px rgba(232,169,34,.5))}
+.wm-glow-login{filter:drop-shadow(0 0 18px rgba(232,169,34,.7))}
+
+/* ===== LOGIN ===== */
+#loginOverlay{position:fixed;inset:0;z-index:999;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px}
+.login-box{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:48px 44px;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(58,44,30,.1)}
+.login-logo{display:flex;align-items:center;gap:14px;margin-bottom:32px;justify-content:center;text-align:center}
+.login-logo-text h1{font-family:var(--font-head);font-size:22px;color:var(--coffee);font-weight:700}
+.login-logo-text h1 span{color:var(--gold);font-style:normal}
+.login-logo-text p{font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-top:2px}
+.login-title{font-family:var(--font-head);font-size:28px;color:var(--heading);margin-bottom:8px;font-weight:700;text-align:center}
+.login-sub{font-family:var(--font-body);font-size:13px;color:var(--muted);margin-bottom:28px;text-align:center}
+.login-field{margin-bottom:16px}
+.login-field label{display:block;font-family:var(--font-body);font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px;font-weight:600}
+.login-field input{width:100%;background:var(--bg);border:1px solid var(--line);color:var(--text);padding:12px 14px;border-radius:10px;font-size:14px;font-family:var(--font-body);transition:all .2s}
+.login-field input:focus{outline:none;border-color:var(--gold);background:#fff;box-shadow:0 0 0 3px rgba(176,142,74,.1)}
+.login-btn{width:100%;background:var(--coffee);color:#f5ecd5;border:none;padding:14px;border-radius:10px;font-weight:600;font-size:14px;cursor:pointer;font-family:var(--font-body);transition:all .2s;margin-top:10px;letter-spacing:1px;text-transform:uppercase}
+.login-btn:hover{background:var(--coffee-dark);transform:translateY(-1px);box-shadow:0 8px 20px rgba(46,26,10,.2)}
+.login-error{color:var(--red);font-size:12.5px;padding:10px 14px;background:var(--red-dim);border-radius:8px;margin-top:12px;display:none;border-left:3px solid var(--red)}
+.login-error.show{display:block}
+.login-hint{font-size:11.5px;color:var(--muted);margin-top:20px;text-align:center;opacity:.7;letter-spacing:.3px}
+
+/* ===== APP SHELL ===== */
+#appShell{display:none}
+
+/* ===== HEADER — deep coffee brown bar ===== */
+header{background:var(--coffee);border-bottom:none;padding:16px 32px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:16px;position:sticky;top:0;z-index:100}
+.brand{display:flex;align-items:center;gap:12px;justify-content:center}
+.wm-header{flex-shrink:0;filter:drop-shadow(0 0 10px rgba(240,214,138,.2))}
+.wm-blades{animation:wmSpin 9s linear infinite}
+@keyframes wmSpin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+.brand-title{font-family:'Inter',sans-serif;font-size:20px;color:#f5ecd5;font-weight:600;letter-spacing:.5px;margin:0}
+.brand-italic{color:var(--gold-3);font-style:normal;font-weight:600}
+.role-badge{display:none}
+.header-right{display:flex;align-items:center;gap:16px;justify-content:flex-end}
+.header-left{display:flex;align-items:center}
+/* ===== SYNC INDICATOR ===== */
+.sync-indicator{display:flex;align-items:center;gap:6px;font-family:var(--font-body);font-size:11px;font-weight:600;letter-spacing:.8px;padding:5px 12px;border-radius:20px;border:1px solid rgba(245,236,213,.18);color:rgba(245,236,213,.75);transition:all .4s;text-transform:uppercase}
+.sync-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;transition:background .4s}
+.sync-indicator.synced .sync-dot{background:#6ba05a;box-shadow:0 0 6px rgba(107,160,90,.7)}
+.sync-indicator.syncing .sync-dot{background:var(--gold-3);box-shadow:0 0 6px rgba(201,168,90,.7);animation:syncPulse .8s ease-in-out infinite}
+.sync-indicator.offline .sync-dot{background:#c24d3a;box-shadow:0 0 6px rgba(194,77,58,.5)}
+.sync-indicator.synced{border-color:rgba(107,160,90,.35)}
+.sync-indicator.syncing{border-color:rgba(201,168,90,.35)}
+.sync-indicator.offline{border-color:rgba(194,77,58,.3)}
+@keyframes syncPulse{0%,100%{opacity:1}50%{opacity:.4}}
+.simple-clock{font-family:var(--font-body);font-size:17px;color:#f5ecd5;font-weight:500;letter-spacing:1px;font-variant-numeric:tabular-nums;opacity:.92}
+.btn-ghost{background:transparent;border:1px solid rgba(245,236,213,.2);color:#f5ecd5;padding:7px 16px;border-radius:20px;font-family:var(--font-body);font-size:12px;font-weight:500;cursor:pointer;transition:all .2s;letter-spacing:.3px}
+.btn-ghost:hover{background:rgba(245,236,213,.08);border-color:rgba(245,236,213,.35)}
+body.theme-dark header{background:var(--coffee-dark);border-bottom:1px solid rgba(176,142,74,.15)}
+@media(max-width:800px){header{padding:14px 18px;grid-template-columns:1fr}.brand-title{font-size:17px}.simple-clock{font-size:15px}}
+
+/* ===== TABS — uppercase, spaced, dark brown bar ===== */
+nav.tabs{display:flex;gap:0;background:var(--coffee-dark);padding:0 32px;border-bottom:none;overflow-x:auto;backdrop-filter:none}
+.tab{background:transparent;border:none;color:rgba(245,236,213,.55);padding:14px 22px;font-size:12px;font-weight:600;cursor:pointer;border-radius:0;transition:all .2s;white-space:nowrap;font-family:var(--font-body);display:flex;align-items:center;gap:7px;border-bottom:3px solid transparent;letter-spacing:2px;text-transform:uppercase}
+.tab:hover{color:#f5ecd5;background:rgba(245,236,213,.04)}
+.tab.active{color:#f5ecd5;background:transparent;border-bottom:3px solid var(--gold-3);text-shadow:none}
+@media(max-width:800px){nav.tabs{padding:0 14px}.tab{padding:12px 14px;letter-spacing:1.2px;font-size:11px}}
+
+/* ===== MAIN ===== */
+main{padding:32px 40px;max-width:1700px;margin:0 auto}
+@media(max-width:800px){main{padding:20px 18px}}
+.page{display:none;animation:fadeIn .2s ease}
+.page.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+
+/* ===== PAGE HEADER ===== */
+.page-header{margin-bottom:24px}
+.page-title{font-family:var(--font-head);font-size:36px;color:var(--heading);font-weight:700;letter-spacing:-.3px;line-height:1.1;margin-bottom:4px}
+.page-sub{font-family:var(--font-body);font-size:13px;color:var(--muted);letter-spacing:.2px}
+
+/* ===== SUB HEADING (uppercase little section title with underline) ===== */
+.sub-heading{font-family:var(--font-body);font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:2.5px;font-weight:600;margin:24px 0 10px 0;padding-bottom:12px;border-bottom:1px solid var(--line)}
+
+/* ===== SECTION TITLE ===== */
+h2.section-title{font-family:var(--font-head);font-size:22px;color:var(--heading);margin:36px 0 18px 0;display:flex;align-items:center;gap:14px;font-weight:700;letter-spacing:-.2px;position:relative}
+h2.section-title::before,h2.section-title::after{display:none}
+h3{font-family:var(--font-head);font-size:17px;color:var(--heading);margin-bottom:14px;font-weight:600;letter-spacing:0}
+
+/* ===== BEAN FLOW ===== */
+.flow-panel{padding:24px;margin-bottom:32px}
+.bean-flow{display:grid;grid-template-columns:1fr auto 1fr auto 1fr auto 1fr;gap:14px;align-items:center}
+.flow-card{background:var(--panel-3);border:1px solid var(--line);border-radius:14px;padding:24px 18px;text-align:center;transition:all .2s}
+.flow-card:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(58,44,30,.08)}
+.flow-val{font-family:var(--font-num);font-size:40px;font-weight:700;color:var(--green-2);line-height:1;margin-bottom:6px;letter-spacing:-.5px}
+.flow-lbl{font-family:var(--font-body);font-size:10.5px;color:var(--muted);letter-spacing:2.5px;font-weight:600}
+.flow-card.hero{background:var(--coffee-mid);border-color:var(--coffee)}
+.flow-card.hero .flow-val{color:#f5ecd5}
+.flow-card.hero .flow-lbl{color:rgba(245,236,213,.7)}
+.flow-arrow{font-size:22px;color:var(--muted);opacity:.5;font-weight:300}
+@media(max-width:900px){.bean-flow{grid-template-columns:1fr;gap:10px}.flow-arrow{transform:rotate(90deg)}}
+
+/* ===== STOCK BY ORIGIN ===== */
+.stock-grid{display:grid;grid-template-columns:1fr 1fr;gap:32px;margin-bottom:32px}
+@media(max-width:900px){.stock-grid{grid-template-columns:1fr;gap:16px}}
+.stock-panel{padding:22px 24px}
+.stock-bars{display:flex;flex-direction:column;gap:14px}
+.stock-bar-row{display:grid;grid-template-columns:90px 1fr 70px;align-items:center;gap:14px}
+.stock-bar-name{font-family:var(--font-body);font-size:14px;color:var(--text);font-weight:500}
+.stock-bar-track{height:8px;background:var(--tan-track);border-radius:4px;overflow:hidden;position:relative}
+.stock-bar-fill{height:100%;border-radius:4px;transition:width .5s cubic-bezier(.25,1,.5,1)}
+.stock-bar-fill.green{background:linear-gradient(90deg,var(--green-2) 0%,var(--green) 100%)}
+.stock-bar-fill.tan{background:linear-gradient(90deg,#8a5a2f 0%,var(--tan) 100%)}
+.stock-bar-val{font-family:var(--font-body);font-size:13px;color:var(--text);text-align:right;font-weight:500;font-variant-numeric:tabular-nums}
+.stock-empty{font-family:var(--font-body);font-size:13px;color:var(--muted);text-align:center;padding:20px 0;font-style:normal;opacity:.7}
+
+/* ===== KPI GRID — clean cream cards with one hero dark card ===== */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:32px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px 22px;position:relative;overflow:hidden;transition:all .25s;box-shadow:0 1px 2px rgba(58,44,30,.04)}
+.kpi:hover{transform:translateY(-2px);box-shadow:0 10px 28px rgba(58,44,30,.1);border-color:var(--gold)}
+.kpi::after,.kpi::before{display:none}
+.kpi-icon{font-size:22px;margin-bottom:14px;display:block;opacity:.85}
+.kpi-label{font-family:var(--font-body);font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1.8px;margin-bottom:10px;font-weight:600}
+.kpi-value{font-family:var(--font-num);font-size:38px;font-weight:700;color:var(--heading);line-height:1;letter-spacing:-.5px;font-feature-settings:"onum" 1}
+.kpi-unit{font-family:var(--font-body);font-size:13px;color:var(--muted);margin-left:3px;font-weight:400;letter-spacing:0}
+.kpi-sub{font-family:var(--font-body);font-size:12px;color:var(--muted);margin-top:10px;letter-spacing:.2px}
+/* Hero (dark) variant */
+.kpi.hero{background:var(--coffee-mid);border-color:var(--coffee);color:#f5ecd5}
+.kpi.hero .kpi-label{color:rgba(245,236,213,.75)}
+.kpi.hero .kpi-value{color:#f5ecd5}
+.kpi.hero .kpi-unit{color:rgba(245,236,213,.6)}
+.kpi.hero .kpi-sub{color:rgba(245,236,213,.7)}
+.kpi.hero:hover{background:var(--coffee);border-color:var(--coffee-dark)}
+
+/* ===== ORIGIN CARDS ===== */
+.origins-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:16px;margin-bottom:24px}
+.origin-card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px;transition:all .2s;position:relative;overflow:hidden;box-shadow:0 1px 2px rgba(58,44,30,.03)}
+.origin-card:hover{transform:translateY(-2px);border-color:var(--gold);box-shadow:0 8px 24px rgba(58,44,30,.08)}
+.origin-card::before{display:none}
+.origin-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px}
+.origin-name{font-family:var(--font-head);font-size:17px;font-weight:700;color:var(--heading)}
+.origin-supplier{font-family:var(--font-body);font-size:11.5px;color:var(--muted);margin-top:2px;letter-spacing:.3px}
+.origin-bean-name{font-family:var(--font-body);font-size:12px;color:var(--gold-2);margin-top:2px;font-style:normal}
+.origin-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px}
+.origin-stat{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px;text-align:center}
+.origin-stat-val{font-family:var(--font-num);font-size:18px;font-weight:700;color:var(--heading)}
+.origin-stat-lbl{font-family:var(--font-body);font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-top:2px;font-weight:600}
+.origin-stat.gb .origin-stat-val{color:var(--gold-2)}
+.origin-stat.roast .origin-stat-val{color:var(--green-2)}
+.origin-stat.waste .origin-stat-val{color:var(--red)}
+.origin-stores{margin-top:10px;display:flex;flex-wrap:wrap;gap:6px}
+
+/* ===== STORE CARDS — styled to match origin cards, 20% larger, flexbox centred ===== */
+.stores-grid{display:flex;flex-wrap:wrap;justify-content:center;gap:19px;margin-bottom:24px}
+.store-card{width:372px;flex-shrink:0;flex-grow:0;background:var(--panel);border:1px solid var(--line);border-radius:17px;padding:24px;position:relative;overflow:hidden;transition:all .2s;box-shadow:0 1px 2px rgba(58,44,30,.03)}
+.store-card:hover{transform:translateY(-2px);border-color:var(--gold);box-shadow:0 8px 24px rgba(58,44,30,.08)}
+.store-card::before{display:none}
+.store-card-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:19px}
+.store-name{font-family:var(--font-head);font-size:20px;font-weight:700;color:var(--heading);margin-bottom:2px}
+.store-loc{font-family:var(--font-body);font-size:13px;color:var(--muted);margin-top:3px;letter-spacing:.3px}
+.store-stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.store-stat{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:12px;text-align:center}
+.store-stat-val{font-family:var(--font-num);font-size:22px;font-weight:700;color:var(--heading);line-height:1;letter-spacing:-.3px}
+.store-stat-lbl{font-family:var(--font-body);font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-top:3px;font-weight:600}
+.store-stat.balance .store-stat-val{color:var(--gold-2)}
+.store-stat.status-val .store-stat-val{color:var(--green-2)}
+.store-origins-list{margin-top:12px;border-top:1px solid var(--line);padding-top:11px;display:flex;flex-direction:column;gap:7px}
+.store-origin-row{display:flex;justify-content:space-between;font-size:13.5px;align-items:center}
+.store-origin-row span:first-child{color:var(--muted);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-right:8px}
+.store-origin-row span:last-child{color:var(--text);font-weight:600;white-space:nowrap}
+.status-dot{display:none}
+
+/* ===== TOAST ===== */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--panel);border:1px solid var(--line);color:var(--text);padding:14px 24px;border-radius:12px;box-shadow:0 12px 32px rgba(58,44,30,.15),0 0 0 1px rgba(58,44,30,.04);z-index:9999;transform:translateX(140%);transition:transform .35s cubic-bezier(.34,1.56,.64,1);font-family:var(--font-body);font-size:14px;font-weight:500;display:flex;align-items:center;gap:10px;max-width:360px}
+.toast.show{transform:translateX(0)}
+
+/* ===== MODAL ===== */
+.modal-overlay{position:fixed;inset:0;background:rgba(46,26,10,.45);z-index:500;display:none;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)}
+.modal-overlay.show{display:flex}
+.modal{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:32px;width:100%;max-width:520px;box-shadow:0 30px 80px rgba(46,26,10,.25);position:relative;max-height:90vh;overflow-y:auto}
+.modal h3{margin-bottom:20px;font-size:20px;font-family:var(--font-head);color:var(--heading)}
+.modal-close{position:absolute;top:16px;right:16px;background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;transition:color .15s;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+.modal-close:hover{color:var(--heading);background:var(--panel-3)}
+
+/* ===== PASSWORD CONFIRM MODAL ===== */
+#pwModal{z-index:600}
+.pw-modal-inner{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:36px 32px;width:100%;max-width:400px;box-shadow:0 30px 80px rgba(46,26,10,.28);position:relative;text-align:center}
+.pw-modal-icon{font-size:38px;margin-bottom:14px;display:block;line-height:1}
+.pw-modal-title{font-family:var(--font-head);font-size:20px;font-weight:700;color:var(--heading);margin-bottom:6px}
+.pw-modal-sub{font-family:var(--font-body);font-size:13px;color:var(--muted);margin-bottom:22px;line-height:1.5}
+.pw-modal-field{position:relative;margin-bottom:8px}
+.pw-modal-field input{width:100%;background:var(--bg);border:1px solid var(--line);color:var(--text);padding:12px 44px 12px 14px;border-radius:10px;font-size:15px;font-family:var(--font-body);text-align:center;letter-spacing:3px;transition:all .2s}
+.pw-modal-field input:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px rgba(176,142,74,.12);background:#fff}
+.pw-modal-field input::placeholder{letter-spacing:0;color:var(--muted)}
+.pw-toggle{position:absolute;right:13px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--muted);font-size:16px;padding:2px;transition:color .15s}
+.pw-toggle:hover{color:var(--heading)}
+.pw-error{font-size:12px;color:var(--red);background:var(--red-dim);border:1px solid rgba(194,77,58,.2);border-radius:8px;padding:8px 12px;margin-bottom:14px;display:none}
+.pw-error.show{display:block}
+.pw-btn-row{display:flex;gap:10px;margin-top:18px}
+.pw-btn-row .btn{flex:1;padding:12px}
+.pw-btn-row .btn-secondary{flex:0 0 auto;padding:12px 20px}
+.pw-shake{animation:pwShake .35s ease}
+@keyframes pwShake{0%,100%{transform:translateX(0)}20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-5px)}80%{transform:translateX(5px)}}
+
+/* ===== CALC BOX ===== */
+.calc-box{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:24px;margin-bottom:20px}
+.calc-display{display:grid;grid-template-columns:1fr auto 1fr auto 1fr;gap:16px;align-items:center;text-align:center;margin-top:16px}
+@media(max-width:700px){.calc-display{grid-template-columns:1fr}}
+.calc-cell{
+  background:#fafaf8;
+  padding:20px 16px;
+  border-radius:12px;
+  border:1px solid #e4ddd0;
+  box-shadow:0 2px 8px rgba(58,44,30,.07),0 1px 2px rgba(58,44,30,.04);
+  transition:box-shadow .2s,transform .2s;
+}
+.calc-cell:hover{box-shadow:0 6px 18px rgba(58,44,30,.11);transform:translateY(-1px)}
+.calc-cell-label{font-family:var(--font-body);font-size:10.5px;color:#6b5c4a;text-transform:uppercase;letter-spacing:1.4px;font-weight:700;margin-bottom:8px}
+.calc-cell-value{font-family:var(--font-num);font-size:30px;font-weight:700;color:#2a1a0a;line-height:1;letter-spacing:-.5px}
+/* Green In — neutral dark (default above) */
+/* Roasted Out — success green */
+.calc-cell.out .calc-cell-label{color:#4e8040}
+.calc-cell.out .calc-cell-value{color:#4e8040}
+.calc-cell.out{border-color:rgba(107,160,90,.3);background:#f4faf1}
+/* Wastage — muted warm red */
+.calc-cell.waste .calc-cell-label{color:#b85c3a}
+.calc-cell.waste .calc-cell-value{color:#c24d3a}
+.calc-cell.waste{border-color:rgba(194,77,58,.25);background:#fdf6f4}
+.calc-arrow{font-size:20px;color:var(--muted);opacity:.4;font-weight:300}
+
+/* ===== PANELS ===== */
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:22px 24px;margin-bottom:20px;position:relative;overflow:hidden;box-shadow:0 1px 2px rgba(58,44,30,.03)}
+.panel::before{display:none}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px}
+@media(max-width:1100px){.grid-3{grid-template-columns:1fr 1fr}}
+@media(max-width:900px){.grid-2,.grid-3{grid-template-columns:1fr}}
+
+/* ===== ORIGIN SECTION HEADERS ===== */
+.origin-section{background:var(--panel);border:1px solid var(--line);border-radius:14px;margin-bottom:18px;overflow:hidden;box-shadow:0 1px 2px rgba(58,44,30,.03)}
+.origin-section-header{padding:18px 24px;background:var(--panel-3);border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.origin-section-title{font-family:var(--font-head);font-size:18px;color:var(--heading);font-weight:700;display:flex;align-items:center;gap:10px}
+.origin-section-body{padding:20px 24px}
+.origin-kpis{display:flex;gap:12px;flex-wrap:wrap}
+.origin-kpi-chip{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 16px;text-align:center;min-width:100px}
+.origin-kpi-chip-val{font-family:var(--font-num);font-size:20px;font-weight:700;color:var(--heading)}
+.origin-kpi-chip-lbl{font-family:var(--font-body);font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1.2px;margin-top:2px;font-weight:600}
+
+/* ===== FORMS ===== */
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+.form-row.three{grid-template-columns:1fr 1fr 1fr}
+.form-row.four{grid-template-columns:1fr 1fr 1fr 1fr}
+.form-row.full{grid-template-columns:1fr}
+@media(max-width:700px){.form-row,.form-row.three,.form-row.four{grid-template-columns:1fr}}
+label{display:block;font-family:var(--font-body);font-size:11px;color:var(--muted);margin-bottom:7px;text-transform:uppercase;letter-spacing:1.3px;font-weight:600}
+input,select,textarea{width:100%;background:#fff;border:1px solid var(--line);color:var(--text);padding:11px 13px;border-radius:9px;font-size:14px;font-family:var(--font-body);transition:all .2s}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px rgba(176,142,74,.1)}
+textarea{resize:vertical;min-height:64px}
+select option{background:#fff;color:var(--text)}
+.btn{background:var(--coffee);color:#f5ecd5;border:none;padding:11px 22px;border-radius:9px;font-weight:600;cursor:pointer;font-size:13px;transition:all .2s;font-family:var(--font-body);letter-spacing:.5px}
+.btn:hover{background:var(--coffee-dark);transform:translateY(-1px);box-shadow:0 6px 18px rgba(46,26,10,.2)}
+.btn-secondary{background:transparent;color:var(--text);border:1px solid var(--line)}
+.btn-secondary:hover{background:var(--panel-3);color:var(--coffee);box-shadow:none}
+.btn-danger{background:var(--red);color:#fff}
+.btn-danger:hover{background:#9c3929;box-shadow:0 6px 18px rgba(194,77,58,.2)}
+.btn-sm{padding:7px 14px;font-size:12px}
+.btn-xs{padding:5px 10px;font-size:11px}
+.btn-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+
+/* ===== TABLES ===== */
+.table-wrap{overflow-x:auto;margin-top:14px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:11px 13px;color:var(--muted);font-family:var(--font-body);font-size:10.5px;text-transform:uppercase;letter-spacing:1.5px;border-bottom:1px solid var(--line);background:var(--panel-3);font-weight:600;white-space:nowrap}
+td{padding:12px 13px;border-bottom:1px solid var(--line);color:var(--text);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--panel-3)}
+.empty-row td{text-align:center;color:var(--muted);padding:40px;font-style:normal}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-family:var(--font-body);font-size:11px;font-weight:600;letter-spacing:.3px;white-space:nowrap}
+.badge.green{background:var(--green-dim);color:var(--green-2);border:1px solid rgba(107,160,90,.25)}
+.badge.red{background:var(--red-dim);color:var(--red);border:1px solid rgba(194,77,58,.2)}
+.badge.gold{background:var(--gold-dim);color:var(--gold-2);border:1px solid rgba(176,142,74,.25)}
+.badge.blue{background:var(--blue-dim);color:var(--blue);border:1px solid rgba(74,107,138,.2)}
+.badge.purple{background:var(--purple-dim);color:var(--purple);border:1px solid rgba(138,107,156,.2)}
+.badge.teal{background:var(--teal-dim);color:var(--teal);border:1px solid rgba(90,144,128,.2)}
+
+/* ===== CALC BOX — duplicate block removed, see primary definition above ===== */
+
+/* ===== CHART ===== */
+.chart-container{height:260px;position:relative;margin-top:14px}
+.chart-bar-row{display:flex;align-items:flex-end;justify-content:space-around;height:210px;gap:10px;padding:0 10px;border-bottom:1px solid var(--line)}
+.chart-bar-group{display:flex;flex-direction:column;align-items:center;flex:1;min-width:0;height:100%;justify-content:flex-end}
+.chart-bar-stack{width:100%;max-width:48px;display:flex;flex-direction:column-reverse;border-radius:5px 5px 0 0;position:relative;overflow:hidden;box-shadow:0 2px 8px rgba(58,44,30,.08);transition:transform .2s;cursor:pointer}
+.chart-bar-stack:hover{transform:scaleY(1.02);transform-origin:bottom;filter:brightness(1.05)}
+.chart-seg{width:100%;border-top:1px solid rgba(255,255,255,.3)}
+.chart-seg:last-child{border-top:none}
+.chart-bar-value{position:absolute;top:-22px;left:50%;transform:translateX(-50%);font-family:var(--font-num);font-size:12px;color:var(--heading);font-weight:700;white-space:nowrap}
+.chart-bar-label{margin-top:10px;font-family:var(--font-body);font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%;text-align:center;letter-spacing:.5px;font-weight:500}
+.week-legend{display:flex;gap:8px;flex-wrap:wrap;align-items:center;max-width:65%;justify-content:flex-end}
+.legend-chip{display:inline-flex;align-items:center;gap:6px;font-family:var(--font-body);font-size:11px;color:var(--muted);background:var(--bg);padding:5px 10px;border-radius:20px;border:1px solid var(--line);white-space:nowrap}
+.legend-dot{display:inline-block;width:10px;height:10px;border-radius:50%}
+
+/* ===== ALERT ===== */
+.alert{padding:14px 16px;border-radius:10px;margin-bottom:14px;font-family:var(--font-body);font-size:13px;display:flex;align-items:flex-start;gap:10px}
+.alert.info{background:var(--blue-dim);border-left:3px solid var(--blue);color:var(--text)}
+.alert.warn{background:var(--gold-dim);border-left:3px solid var(--gold);color:var(--text)}
+.alert.error{background:var(--red-dim);border-left:3px solid var(--red);color:var(--text)}
+.alert.success{background:var(--green-dim);border-left:3px solid var(--green-2);color:var(--text)}
+
+/* ===== SETTINGS (unified) ===== */
+.settings-section{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:26px;margin-bottom:20px;box-shadow:0 1px 2px rgba(58,44,30,.03)}
+.settings-section::before{display:none}
+.settings-section h3{display:flex;align-items:center;gap:10px;padding-bottom:14px;border-bottom:1px solid var(--line);margin-bottom:18px;font-family:var(--font-head);font-size:19px;color:var(--heading);font-weight:700}
+.settings-row{display:flex;justify-content:space-between;align-items:center;padding:14px 0;border-bottom:1px solid var(--line);gap:16px;flex-wrap:wrap}
+.settings-row:last-child{border-bottom:none;padding-bottom:0}
+.settings-row-info p{font-family:var(--font-body);font-size:14px;color:var(--text);font-weight:500}
+.settings-row-info span{font-family:var(--font-body);font-size:12.5px;color:var(--muted)}
+.danger-zone{background:var(--red-dim);border:1px solid rgba(194,77,58,.25);border-radius:14px;padding:26px;margin-bottom:20px}
+.danger-zone h3{color:var(--red)}
+
+/* STORE MANAGE */
+.store-manage-card{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:18px;margin-bottom:12px;transition:border-color .2s}
+.store-manage-card:hover{border-color:rgba(176,142,74,.25)}
+.store-manage-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.store-manage-header strong{font-size:15px;color:var(--cream)}
+body.theme-light .store-manage-card{background:rgba(255,255,255,.6)}
+
+/* TYPOGRAPHY PREVIEW */
+.typography-preview{background:linear-gradient(135deg,rgba(176,142,74,.08) 0%,var(--bg) 100%);border:1px dashed rgba(176,142,74,.3);border-radius:12px;padding:22px;margin-top:16px;text-align:center}
+body.theme-light .typography-preview{background:linear-gradient(135deg,rgba(164,117,24,.08) 0%,rgba(255,255,255,.5) 100%)}
+.typo-preview-num{font-family:var(--font-num);font-size:42px;font-weight:700;color:var(--gold-3);line-height:1;margin-bottom:8px;text-shadow:0 0 16px rgba(176,142,74,.25)}
+.typo-preview-word{font-family:var(--font-body);font-size:15px;color:var(--text);opacity:.85;letter-spacing:.2px}
+
+/* ROAST LEVELS */
+.roast-levels-list{display:flex;flex-wrap:wrap;gap:10px;margin-top:8px;min-height:40px}
+.roast-level-chip{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,rgba(176,142,74,.15) 0%,rgba(176,142,74,.06) 100%);border:1px solid rgba(176,142,74,.35);color:var(--gold-3);padding:8px 8px 8px 14px;border-radius:30px;font-size:13px;font-weight:500;transition:all .2s}
+.roast-level-chip:hover{border-color:var(--gold);background:linear-gradient(135deg,rgba(176,142,74,.2) 0%,rgba(176,142,74,.12) 100%)}
+body.theme-light .roast-level-chip{color:var(--gold-2)}
+.chip-remove{background:rgba(194,77,58,.12);border:none;color:var(--red);width:22px;height:22px;border-radius:50%;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;font-weight:700;flex-shrink:0}
+.chip-remove:hover{background:var(--red);color:#fff;transform:scale(1.1)}
+
+/* COFFEE INVENTORY */
+.inv-block{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:18px;margin-bottom:16px;transition:border-color .2s}
+.inv-block:hover{border-color:rgba(176,142,74,.25)}
+body.theme-light .inv-block{background:rgba(255,255,255,.4)}
+.inv-block-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--line)}
+.inv-block-header h4{font-family:var(--font-head);font-size:16px;color:var(--gold);font-weight:600;letter-spacing:.3px}
+.inv-count{background:var(--gold-dim);border:1px solid rgba(176,142,74,.35);color:var(--gold);padding:2px 10px;border-radius:12px;font-size:11px;font-weight:700;min-width:28px;text-align:center}
+.inv-chip-list{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;min-height:36px}
+.inv-chip{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,var(--panel-2) 0%,var(--panel-3) 100%);border:1px solid var(--line);color:var(--text);padding:7px 7px 7px 12px;border-radius:20px;font-size:12.5px;font-weight:500;transition:all .2s;max-width:100%}
+.inv-chip:hover{border-color:var(--gold);transform:translateY(-1px);box-shadow:0 4px 12px rgba(58,44,30,.08)}
+.inv-chip>span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px}
+body.theme-light .inv-chip{background:linear-gradient(135deg,#ffffff 0%,#fbf7ee 100%)}
+.inv-add-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.inv-add-row input{flex:1;min-width:220px}
+.inv-empty{font-size:12px;color:var(--muted);font-style:normal;padding:8px 0;opacity:.7}
+
+/* ===== REPORT TABS ===== */
+.report-tabs{display:flex;gap:4px;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:4px;margin-bottom:20px;flex-wrap:wrap}
+.rtab{background:transparent;border:none;color:var(--muted);padding:8px 18px;font-size:12px;font-weight:600;cursor:pointer;border-radius:8px;transition:all .2s;font-family:var(--font-body);letter-spacing:.2px}
+.rtab.active{background:var(--coffee);color:#f5ecd5}
+.rtab:not(.active):hover{background:var(--panel-3);color:var(--coffee)}
+.report-view{display:none}
+.report-view.active{display:block}
+
+/* ===== EXPORT BUTTONS ===== */
+.export-strip{display:flex;gap:8px;flex-wrap:wrap;padding:14px 0;border-top:1px solid var(--line);margin-top:10px}
+.export-btn{background:var(--bg);color:var(--text);border:1px solid var(--line);padding:8px 16px;border-radius:8px;font-family:var(--font-body);font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:6px}
+.export-btn:hover{background:var(--green-dim);border-color:var(--green-2);color:var(--green-2)}
+.export-btn.primary{background:var(--coffee);color:#f5ecd5;border-color:var(--coffee)}
+.export-btn.primary:hover{background:var(--coffee-dark);color:#f5ecd5;border-color:var(--coffee-dark)}
+.export-panel{margin-top:24px;background:var(--panel-3)}
+
+/* ===== MISC ===== */
+.flex{display:flex;align-items:center;gap:10px}
+.flex-between{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.text-muted{color:var(--muted)}.text-gold{color:var(--gold-2)}.text-green{color:var(--green-2)}.text-red{color:var(--red)}.text-blue{color:var(--blue)}.text-teal{color:var(--teal)}
+.small{font-size:12px}.mb-0{margin-bottom:0}.mt-2{margin-top:20px}
+
+/* ===== DIVIDER ===== */
+.section-divider{height:1px;background:var(--line);margin:24px 0}
+
+/* ===== ROASTING ORIGIN OVERVIEW ===== */
+.roast-origin-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;margin-bottom:20px}
+.roast-origin-card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px;transition:all .2s;box-shadow:0 1px 2px rgba(58,44,30,.03)}
+.roast-origin-card:hover{border-color:var(--green-2);transform:translateY(-2px)}
+.roast-origin-card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--line)}
+.roast-origin-name{font-family:var(--font-head);font-size:17px;color:var(--heading);font-weight:700}
+.roast-stats-row{display:flex;gap:10px;margin-top:10px;flex-wrap:wrap}
+.roast-stat-mini{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 12px;flex:1;min-width:70px;text-align:center}
+.roast-stat-mini-val{font-family:var(--font-num);font-size:17px;font-weight:700;color:var(--heading)}
+.roast-stat-mini-lbl{font-family:var(--font-body);font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-weight:600}
+
+/* ===== WASTED ORIGIN ===== */
+.waste-origin-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;margin-bottom:20px}
+.waste-origin-card{background:var(--panel);border:1px solid rgba(194,77,58,.2);border-radius:12px;padding:18px;transition:all .2s}
+.waste-origin-card:hover{border-color:var(--red);transform:translateY(-2px)}
+
+/* ===== PROGRESS BAR ===== */
+.progress-bar{height:6px;background:var(--tan-track);border-radius:3px;margin-top:6px;overflow:hidden}
+.progress-fill{height:100%;border-radius:3px;transition:width .4s ease}
+.progress-fill.green{background:linear-gradient(90deg,var(--green-2),var(--green))}
+.progress-fill.red{background:linear-gradient(90deg,var(--red),#9c3929)}
+.progress-fill.gold{background:linear-gradient(90deg,var(--gold),var(--gold-2))}
+</style>
+</head>
+<body>
+
+<!-- ===== LOGIN ===== -->
+<div id="loginOverlay">
+  <div class="login-box">
+    <div class="login-logo">
+      <div class="login-logo-text">
+        <h1>Windmill <span>Cafe &amp; Roastery</span></h1>
+        <p>Roastery Operations System</p>
+      </div>
+    </div>
+    <div class="login-title">Welcome Back</div>
+    <div class="login-sub">Sign in to access your roastery dashboard</div>
+    <div class="login-field">
+      <label>Username</label>
+      <input type="text" id="loginUser" placeholder="Enter username" autocomplete="username"/>
+    </div>
+    <div class="login-field">
+      <label>Password</label>
+      <input type="password" id="loginPass" placeholder="Enter password" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"/>
+    </div>
+    <button class="login-btn" onclick="doLogin()">Sign In →</button>
+    <div class="login-error" id="loginError">Incorrect username or password.</div>
+    <div class="login-hint">Default: admin / windmill2024</div>
+  </div>
+</div>
+
+<!-- ===== APP SHELL ===== -->
+<div id="appShell">
+<header>
+  <div class="header-left"></div>
+  <div class="brand">
+    <!-- Premium Windmill Logo -->
+    <svg class="wm-header" width="42" height="42" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <defs>
+        <linearGradient id="bladeGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#f5e098"/>
+          <stop offset="100%" stop-color="#c9a85a"/>
+        </linearGradient>
+        <linearGradient id="bladeGrad2" x1="100%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stop-color="#e8c96a"/>
+          <stop offset="100%" stop-color="#a8842a"/>
+        </linearGradient>
+        <linearGradient id="towerGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#d4a84b"/>
+          <stop offset="50%" stop-color="#f0cc6e"/>
+          <stop offset="100%" stop-color="#b8902a"/>
+        </linearGradient>
+        <radialGradient id="hubGrad" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#f5e098"/>
+          <stop offset="100%" stop-color="#c9a85a"/>
+        </radialGradient>
+        <filter id="glow">
+          <feGaussianBlur stdDeviation="1.5" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+      </defs>
+      <!-- Tower body -->
+      <path d="M43 95 L44 60 L56 60 L57 95 Z" fill="url(#towerGrad)" opacity="0.9"/>
+      <!-- Tower base platform -->
+      <rect x="38" y="92" width="24" height="4" rx="2" fill="#c9a85a" opacity="0.85"/>
+      <!-- Tower door -->
+      <path d="M47 80 Q50 77 53 80 L53 92 L47 92 Z" fill="#2e1a0a" opacity="0.5"/>
+      <!-- Tower window -->
+      <circle cx="50" cy="70" r="2.5" fill="#2e1a0a" opacity="0.4"/>
+      <!-- Tower cap -->
+      <path d="M44 60 Q50 55 56 60 Z" fill="#d4a84b"/>
+      <!-- Spinning blades group -->
+      <g class="wm-blades" style="transform-origin:50px 58px">
+        <!-- Blade 1 - up -->
+        <path d="M50 58 L47 22 Q45 16 50 14 Q55 16 53 22 Z" fill="url(#bladeGrad1)" opacity="0.95"/>
+        <!-- Blade 2 - right -->
+        <path d="M50 58 L86 55 Q92 53 94 58 Q92 63 86 61 Z" fill="url(#bladeGrad2)" opacity="0.95"/>
+        <!-- Blade 3 - down -->
+        <path d="M50 58 L53 94 Q55 100 50 102 Q45 100 47 94 Z" fill="url(#bladeGrad1)" opacity="0.95"/>
+        <!-- Blade 4 - left -->
+        <path d="M50 58 L14 61 Q8 63 6 58 Q8 53 14 55 Z" fill="url(#bladeGrad2)" opacity="0.95"/>
+        <!-- Blade crossbars for realism -->
+        <line x1="50" y1="58" x2="50" y2="16" stroke="rgba(201,168,90,0.4)" stroke-width="1"/>
+        <line x1="50" y1="58" x2="92" y2="58" stroke="rgba(201,168,90,0.4)" stroke-width="1"/>
+        <line x1="50" y1="58" x2="50" y2="100" stroke="rgba(201,168,90,0.4)" stroke-width="1"/>
+        <line x1="50" y1="58" x2="8" y2="58" stroke="rgba(201,168,90,0.4)" stroke-width="1"/>
+      </g>
+      <!-- Center hub -->
+      <circle cx="50" cy="58" r="6" fill="url(#hubGrad)" filter="url(#glow)"/>
+      <circle cx="50" cy="58" r="3" fill="#2e1a0a" opacity="0.7"/>
+      <circle cx="50" cy="58" r="1.2" fill="#f5e098"/>
+    </svg>
+    <h1 class="brand-title">Windmill <span class="brand-italic">Cafe &amp; Roastery</span></h1>
+    <span id="roleBadge" style="display:none"></span>
+  </div>
+  <div class="header-right">
+    <div class="sync-indicator syncing" id="syncIndicator">
+      <span class="sync-dot"></span>
+      <span id="syncLabel">CONNECTING</span>
+    </div>
+    <div class="simple-clock" id="simpleClock">--:--:--</div>
+    <button class="btn-ghost" onclick="toggleTheme()" title="Toggle theme" id="themeToggleBtn">🌙</button>
+    <button class="btn-ghost" onclick="doLogout()">Log Out</button>
+  </div>
+</header>
+
+<nav class="tabs" id="tabs">
+  <button class="tab active" data-page="dashboard">Dashboard</button>
+  <button class="tab" data-page="greenbeans">Receiving</button>
+  <button class="tab" data-page="movements">Movements</button>
+  <button class="tab" data-page="roasting">Roasting</button>
+  <button class="tab" data-page="reports">Reports</button>
+  <button class="tab" data-page="settings">Settings</button>
+</nav>
+
+<main>
+
+<!-- ===== DASHBOARD ===== -->
+<section class="page active" id="page-dashboard">
+  <div class="page-header">
+    <h2 class="page-title">Operations Dashboard</h2>
+    <p class="page-sub">Live overview — all numbers update in real time</p>
+  </div>
+
+  <div id="lowStockAlerts"></div>
+
+  <div class="kpi-grid">
+    <div class="kpi">
+      <div class="kpi-icon">🌿</div>
+      <div class="kpi-label">GREEN BEANS</div>
+      <div class="kpi-value" id="kpi-green">0<span class="kpi-unit">kg</span></div>
+      <div class="kpi-sub" id="kpi-green-sub">across all stores</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-icon">☕</div>
+      <div class="kpi-label">ROASTED STOCK</div>
+      <div class="kpi-value" id="kpi-roasted">0<span class="kpi-unit">kg</span></div>
+      <div class="kpi-sub">ready to dispatch</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-icon">📦</div>
+      <div class="kpi-label">TOTAL RECEIVED</div>
+      <div class="kpi-value" id="kpi-received">0<span class="kpi-unit">kg</span></div>
+      <div class="kpi-sub" id="kpi-received-sub">0 deliveries</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-icon">📈</div>
+      <div class="kpi-label">AVG YIELD</div>
+      <div class="kpi-value" id="kpi-yield">0<span class="kpi-unit">%</span></div>
+      <div class="kpi-sub" id="kpi-yield-sub">0 sessions</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-icon">♻️</div>
+      <div class="kpi-label">WASTED STOCK</div>
+      <div class="kpi-value" id="kpi-wasted">0<span class="kpi-unit">kg</span></div>
+      <div class="kpi-sub" id="kpi-wasted-sub">0% avg loss rate</div>
+    </div>
+  </div>
+
+  <!-- BEAN FLOW -->
+  <h3 class="sub-heading">BEAN FLOW</h3>
+  <div class="panel flow-panel">
+    <div class="bean-flow" id="beanFlow">
+      <div class="flow-card"><div class="flow-val" id="flow-received">0</div><div class="flow-lbl">RECEIVED</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-card"><div class="flow-val" id="flow-stores">0</div><div class="flow-lbl">IN STORES</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-card"><div class="flow-val" id="flow-wasted">0</div><div class="flow-lbl">WASTED</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-card"><div class="flow-val" id="flow-output">0</div><div class="flow-lbl">OUTPUT</div></div>
+    </div>
+  </div>
+
+  <!-- STOCK BY ORIGIN -->
+  <div class="stock-grid">
+    <div>
+      <h3 class="sub-heading">GREEN BEAN STOCK — ALL STORES</h3>
+      <div class="panel stock-panel">
+        <div id="greenStockByOrigin" class="stock-bars"></div>
+      </div>
+    </div>
+    <div>
+      <h3 class="sub-heading">ROASTED BEAN STOCK</h3>
+      <div class="panel stock-panel">
+        <div id="roastedStockByOrigin" class="stock-bars"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Store Balances -->
+  <h2 class="section-title" style="justify-content:center;text-align:center">Store Green Bean Balances</h2>
+  <div class="stores-grid" id="dashboardStores"></div>
+
+  <!-- Origin Breakdown -->
+  <h2 class="section-title">Green Beans by Origin</h2>
+  <div class="origins-grid" id="originCards"></div>
+
+  <!-- Roasting Origin Overview -->
+  <h2 class="section-title">Roasting Operations by Origin</h2>
+  <div class="roast-origin-grid" id="dashRoastOrigins"></div>
+
+  <!-- Recent Activity -->
+  <div class="grid-2 mt-2">
+    <div class="panel">
+      <h3>Recent Roasting Batches</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Date</th><th>Origin</th><th>In</th><th>Out</th><th>Waste%</th></tr></thead>
+          <tbody id="recentRoasting"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="panel">
+      <h3>Recent Green Bean Deliveries</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Date</th><th>Origin / Bean</th><th>Store</th><th>Qty</th></tr></thead>
+          <tbody id="recentGreen"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel mt-2">
+    <div class="flex-between" style="margin-bottom:10px">
+      <h3 class="mb-0">Last 7 Days — Roasting Output by Origin (kg)</h3>
+      <div id="weekChartLegend" class="week-legend"></div>
+    </div>
+    <div class="chart-container">
+      <div class="chart-bar-row" id="weekChart"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== GREEN BEANS ===== -->
+<section class="page" id="page-greenbeans">
+  <h2 class="section-title">Receive Green Beans</h2>
+  <div class="panel">
+    <h3>Log New Delivery</h3>
+    <div class="form-row"><div><label>Date Received</label><input type="date" id="gb-date"/></div></div>
+
+    <!-- 1. Bean Name (coffee name) -->
+    <div class="form-row">
+      <div><label>1. Coffee / Bean Name</label>
+        <select id="gb-bean-name-sel" onchange="handleBeanNameSel(this.value)">
+          <option value="">— Select Bean Name —</option>
+          <option value="__new__">+ Add New Bean Name</option>
+        </select>
+      </div>
+      <div id="gb-bean-name-new-wrap" style="display:none"><label>New Bean Name</label><input type="text" id="gb-bean-name-new" placeholder="e.g. Yirgacheffe Natural"/></div>
+    </div>
+
+    <!-- 2. Origin -->
+    <div class="form-row">
+      <div><label>2. Origin / Country</label>
+        <select id="gb-origin-sel" onchange="handleOriginSel(this.value)">
+          <option value="">— Select Origin —</option>
+          <option value="__new__">+ Add New Origin</option>
+        </select>
+      </div>
+      <div id="gb-origin-new-wrap" style="display:none"><label>New Origin Name</label><input type="text" id="gb-origin-new" placeholder="e.g. Ethiopia Guji"/></div>
+    </div>
+
+    <!-- 3. Supplier -->
+    <div class="form-row">
+      <div><label>3. Supplier</label>
+        <select id="gb-supplier-sel" onchange="handleSupplierSel(this.value)">
+          <option value="">— Select Supplier —</option>
+          <option value="__new__">+ Add New Supplier</option>
+        </select>
+      </div>
+      <div id="gb-supplier-new-wrap" style="display:none"><label>New Supplier Name</label><input type="text" id="gb-supplier-new" placeholder="e.g. Al Maya Coffee"/></div>
+    </div>
+
+    <!-- Quantity / Store / Batch -->
+    <div class="form-row three">
+      <div><label>Quantity (kg)</label><input type="number" id="gb-kg" placeholder="e.g. 250" min="0" step="0.1"/></div>
+      <div><label>Destination Store</label><select id="gb-store"><option value="">— Select Store —</option></select></div>
+      <div><label>Batch / Lot Number</label><input type="text" id="gb-batch" placeholder="e.g. LOT-2026-04"/></div>
+    </div>
+    <div class="form-row">
+      <div><label>Cost (optional)</label><input type="number" id="gb-cost" placeholder="0.00" min="0" step="0.01"/></div>
+      <div><label>Notes</label><input type="text" id="gb-notes" placeholder="Quality notes, moisture %, etc."/></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn" onclick="addGreenBean()">💾 Save Delivery</button>
+      <button class="btn btn-secondary" onclick="clearGBForm()">Clear</button>
+    </div>
+  </div>
+
+  <!-- Inventory grouped by origin -->
+  <h2 class="section-title">Green Bean Inventory</h2>
+  <div id="gbOriginSections"></div>
+</section>
+
+<!-- ===== ROASTING ===== -->
+<section class="page" id="page-roasting">
+  <h2 class="section-title">Roasting Log</h2>
+  <div class="calc-box">
+    <div class="flex-between">
+      <h3 class="mb-0" style="color:var(--gold)">🧮 Roasting Calculator</h3>
+      <button class="btn btn-sm" onclick="useCalcInForm()">↓ Use These Values</button>
+    </div>
+    <div class="form-row" style="margin-top:14px">
+      <div><label>Green Beans In (kg)</label><input type="number" id="calc-in" value="100" min="0" step="1" oninput="updateCalc()"/></div>
+      <div><label>Expected Waste %</label><input type="number" id="calc-waste" value="12" min="0" max="100" step="0.5" oninput="updateCalc()"/></div>
+    </div>
+    <div class="calc-display">
+      <div class="calc-cell"><div class="calc-cell-label">Green In</div><div class="calc-cell-value" id="calc-in-display">100 kg</div></div>
+      <div class="calc-arrow">→</div>
+      <div class="calc-cell out"><div class="calc-cell-label">Roasted Out</div><div class="calc-cell-value" id="calc-out-display">88.0 kg</div></div>
+      <div class="calc-arrow">+</div>
+      <div class="calc-cell waste"><div class="calc-cell-label">Wastage</div><div class="calc-cell-value" id="calc-waste-display">12.0 kg</div></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>Log New Roasting Batch</h3>
+    <div class="form-row three">
+      <div><label>Roast Date</label><input type="date" id="r-date"/></div>
+      <div><label>Green Beans Source</label><select id="r-source"><option value="">— Select batch —</option></select></div>
+      <div><label>Roast Level</label>
+        <select id="r-level">
+          <!-- populated dynamically from data.roastLevels -->
+        </select>
+      </div>
+    </div>
+    <div class="form-row three">
+      <div><label>Green In (kg)</label><input type="number" id="r-in" placeholder="100" step="0.1" min="0" oninput="autoCalcWaste()"/></div>
+      <div><label>Roasted Out (kg)</label><input type="number" id="r-out" placeholder="88" step="0.1" min="0" oninput="autoCalcWaste()"/></div>
+      <div><label>Wastage (auto)</label><input type="text" id="r-waste-display" readonly placeholder="—"/></div>
+    </div>
+    <div class="form-row full"><div><label>Notes</label><textarea id="r-notes" placeholder="Moisture, roast time, color..."></textarea></div></div>
+    <div class="btn-row">
+      <button class="btn" onclick="addRoasting()">💾 Save Roasting Batch</button>
+      <button class="btn btn-secondary" onclick="clearRForm()">Clear</button>
+    </div>
+  </div>
+
+  <!-- Roasting Output: Origin by Origin -->
+  <h2 class="section-title">Roasting Output by Origin</h2>
+  <div id="roastOriginSections"></div>
+
+  <!-- Wasted Summary Origin by Origin -->
+  <h2 class="section-title">Wasted Beans by Origin</h2>
+  <div id="wasteOriginSections"></div>
+</section>
+
+<!-- ===== MOVEMENTS (Store → Roastery transfers) ===== -->
+<section class="page" id="page-movements">
+  <div class="page-header">
+    <h2 class="page-title">Stock Movements</h2>
+    <p class="page-sub">Track transfers of green beans between stores and to the roastery</p>
+  </div>
+
+  <div class="panel">
+    <h3>Log New Movement</h3>
+    <p class="text-muted small" style="margin-bottom:14px">Record a transfer of green beans from one store to another, or from a store to the roastery for processing.</p>
+    <div class="form-row three">
+      <div><label>Date</label><input type="date" id="mv-date"/></div>
+      <div><label>Movement Type</label>
+        <select id="mv-type">
+          <option value="store_to_roastery">Store → Roastery</option>
+          <option value="store_to_store">Store → Store</option>
+          <option value="adjustment">Inventory Adjustment</option>
+        </select>
+      </div>
+      <div><label>Source Batch</label>
+        <select id="mv-source"><option value="">— Select green bean batch —</option></select>
+      </div>
+    </div>
+    <div class="form-row three">
+      <div><label>Quantity (kg)</label><input type="number" id="mv-kg" placeholder="e.g. 25" min="0" step="0.1"/></div>
+      <div><label>Destination</label>
+        <select id="mv-dest"><option value="">— Select destination —</option></select>
+      </div>
+      <div><label>Reference / Notes</label><input type="text" id="mv-notes" placeholder="Transfer order #, reason, etc."/></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn" onclick="addMovement()">💾 Save Movement</button>
+      <button class="btn btn-secondary" onclick="clearMVForm()">Clear</button>
+    </div>
+  </div>
+
+  <!-- Movement summary -->
+  <div class="kpi-grid" style="margin-top:20px;margin-bottom:20px">
+    <div class="kpi">
+      <div class="kpi-icon">🔄</div>
+      <div class="kpi-label">TOTAL MOVEMENTS</div>
+      <div class="kpi-value" id="mv-kpi-total">0</div>
+      <div class="kpi-sub">logged transfers</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-icon">→</div>
+      <div class="kpi-label">TO ROASTERY</div>
+      <div class="kpi-value" id="mv-kpi-roastery">0<span class="kpi-unit">kg</span></div>
+      <div class="kpi-sub">green beans moved for roasting</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-icon">⇄</div>
+      <div class="kpi-label">STORE ↔ STORE</div>
+      <div class="kpi-value" id="mv-kpi-interstore">0<span class="kpi-unit">kg</span></div>
+      <div class="kpi-sub">between stores</div>
+    </div>
+  </div>
+
+  <h2 class="section-title">Movement History</h2>
+  <div class="panel">
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Date</th><th>Type</th><th>Bean / Origin</th><th>From</th><th>To</th><th>Qty</th><th>Notes</th><th>Actions</th></tr></thead>
+        <tbody id="movementsTable"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ===== REPORTS & EXPORT ===== -->
+<section class="page" id="page-reports">
+  <h2 class="section-title">Reports &amp; Export</h2>
+
+  <!-- Date range & quick select -->
+  <div class="panel">
+    <div class="flex-between">
+      <h3 class="mb-0">📅 Date Range Filter</h3>
+      <div class="flex" style="flex-wrap:wrap;gap:8px">
+        <button class="btn btn-secondary btn-sm" onclick="setRange('day')">Today</button>
+        <button class="btn btn-secondary btn-sm" onclick="setRange('week')">This Week</button>
+        <button class="btn btn-secondary btn-sm" onclick="setRange('month')">This Month</button>
+        <button class="btn btn-secondary btn-sm" onclick="setRange('all')">All Time</button>
+      </div>
+    </div>
+    <div class="form-row" style="margin-top:14px">
+      <div><label>From</label><input type="date" id="rep-from" onchange="renderReports()"/></div>
+      <div><label>To</label><input type="date" id="rep-to" onchange="renderReports()"/></div>
+    </div>
+    <div class="btn-row"><button class="btn" onclick="renderReports()">📊 Generate Report</button></div>
+  </div>
+
+  <!-- Report sub-tabs -->
+  <div class="report-tabs">
+    <button class="rtab active" onclick="showReportTab('daily')">Daily</button>
+    <button class="rtab" onclick="showReportTab('weekly')">Weekly</button>
+    <button class="rtab" onclick="showReportTab('monthly')">Monthly</button>
+    <button class="rtab" onclick="showReportTab('stock')">Stock Records</button>
+    <button class="rtab" onclick="showReportTab('roast-origin')">Roasting by Origin</button>
+    <button class="rtab" onclick="showReportTab('waste-origin')">Waste by Origin</button>
+  </div>
+
+  <!-- DAILY -->
+  <div class="report-view active" id="rv-daily">
+    <div class="panel">
+      <h3>Daily Roasting Report</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Date</th><th>Batches</th><th>Green In</th><th>Roasted Out</th><th>Wastage</th><th>Avg Waste%</th></tr></thead>
+          <tbody id="dailyReport"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="panel">
+        <h3>Summary</h3>
+        <table><tbody>
+          <tr><td>Total green beans used</td><td class="text-gold" id="rep-green">0 kg</td></tr>
+          <tr><td>Total roasted output</td><td class="text-green" id="rep-roasted">0 kg</td></tr>
+          <tr><td>Total wastage</td><td class="text-red" id="rep-waste">0 kg</td></tr>
+          <tr><td>Average wastage rate</td><td id="rep-rate">0%</td></tr>
+          <tr><td>Highest wastage batch</td><td id="rep-highest">—</td></tr>
+          <tr><td>Lowest wastage batch</td><td id="rep-lowest">—</td></tr>
+        </tbody></table>
+      </div>
+      <div class="panel">
+        <h3>Store Balances</h3>
+        <div class="table-wrap">
+          <table><thead><tr><th>Store</th><th>Total Received</th><th>Remaining</th></tr></thead>
+          <tbody id="rep-stores"></tbody></table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- WEEKLY -->
+  <div class="report-view" id="rv-weekly">
+    <div class="panel">
+      <h3>Weekly Roasting Report</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Week</th><th>Batches</th><th>Green In</th><th>Roasted Out</th><th>Wastage</th><th>Avg Waste%</th></tr></thead>
+          <tbody id="weeklyReport"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- MONTHLY -->
+  <div class="report-view" id="rv-monthly">
+    <div class="panel">
+      <h3>Monthly Roasting Report</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Month</th><th>Batches</th><th>Green In</th><th>Roasted Out</th><th>Wastage</th><th>Avg Waste%</th></tr></thead>
+          <tbody id="monthlyReport"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- STOCK RECORDS -->
+  <div class="report-view" id="rv-stock">
+    <div class="panel">
+      <h3>All Stock Records</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Date</th><th>Origin</th><th>Bean Name</th><th>Supplier</th><th>Store</th><th>Received</th><th>Remaining</th><th>Batch</th></tr></thead>
+          <tbody id="stockReport"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ROASTING BY ORIGIN -->
+  <div class="report-view" id="rv-roast-origin">
+    <div id="repRoastOriginSections"></div>
+  </div>
+
+  <!-- WASTE BY ORIGIN -->
+  <div class="report-view" id="rv-waste-origin">
+    <div id="repWasteOriginSections"></div>
+  </div>
+
+  <!-- Export CSV strip — AFTER tables so users generate first, then export -->
+  <div class="panel export-panel">
+    <h3>📤 Export Displayed Report</h3>
+    <p class="text-muted small" style="margin-bottom:12px">Reports above are filtered by your date range. Download any section as a CSV file.</p>
+    <div class="export-strip">
+      <button class="export-btn" onclick="exportCSV('daily')">📅 Daily</button>
+      <button class="export-btn" onclick="exportCSV('weekly')">🗓 Weekly</button>
+      <button class="export-btn" onclick="exportCSV('monthly')">📆 Monthly</button>
+      <button class="export-btn" onclick="exportCSV('stock')">📦 Stock Records</button>
+      <button class="export-btn" onclick="exportCSV('roasting_origin')">🔥 Roasting by Origin</button>
+      <button class="export-btn" onclick="exportCSV('waste_origin')">♻️ Waste by Origin</button>
+      <button class="export-btn primary" onclick="exportCSV('all')">⬇ Full Export</button>
+    </div>
+  </div>
+</section>
+
+<!-- ===== SETTINGS (unified — stores + system) ===== -->
+<section class="page" id="page-settings">
+  <h2 class="section-title">Settings &amp; System</h2>
+
+  <!-- CONTROL PANEL -->
+  <div class="settings-section">
+    <h3>🎛 Dashboard Control Panel</h3>
+    <p class="text-muted small" style="margin-bottom:18px">Core controls for how the dashboard looks and who's signed in.</p>
+    <div class="form-row three">
+      <div>
+        <label>Active Role</label>
+        <select id="roleSelect" onchange="setRole(this.value)">
+          <option value="Admin">Admin</option>
+          <option value="Manager">Manager</option>
+          <option value="Staff">Staff</option>
+          <option value="Storekeeper">Storekeeper</option>
+          <option value="Roaster">Roaster</option>
+        </select>
+      </div>
+      <div>
+        <label>Theme</label>
+        <select id="themeSelect" onchange="setTheme(this.value)">
+          <option value="cream">Cream (Light)</option>
+          <option value="dark">Coffee Night (Dark)</option>
+        </select>
+      </div>
+      <div>
+        <label>Accent Preset</label>
+        <select id="accentSelect" onchange="setAccent(this.value)">
+          <option value="coffee">Coffee Brown (Default)</option>
+          <option value="gold">Amber Gold</option>
+          <option value="forest">Forest Green</option>
+          <option value="slate">Slate Blue</option>
+          <option value="burgundy">Burgundy</option>
+          <option value="custom">Custom (use pickers below)</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="section-divider"></div>
+    <h4 style="font-family:var(--font-head);font-size:17px;color:var(--heading);margin-bottom:8px">🎨 Custom Colors</h4>
+    <p class="text-muted small" style="margin-bottom:16px">Pick your own colors. These only apply when <strong>Accent Preset = Custom</strong>.</p>
+    <div class="form-row four">
+      <div>
+        <label>Header / Primary</label>
+        <div class="color-picker-row">
+          <input type="color" id="colorHeader" value="#4a2a0f" onchange="setCustomColor('header',this.value)"/>
+          <input type="text" id="colorHeaderHex" value="#4a2a0f" onchange="setCustomColor('header',this.value)"/>
+        </div>
+      </div>
+      <div>
+        <label>Accent (Gold)</label>
+        <div class="color-picker-row">
+          <input type="color" id="colorAccent" value="#b08e4a" onchange="setCustomColor('accent',this.value)"/>
+          <input type="text" id="colorAccentHex" value="#b08e4a" onchange="setCustomColor('accent',this.value)"/>
+        </div>
+      </div>
+      <div>
+        <label>Background</label>
+        <div class="color-picker-row">
+          <input type="color" id="colorBg" value="#f4ece0" onchange="setCustomColor('bg',this.value)"/>
+          <input type="text" id="colorBgHex" value="#f4ece0" onchange="setCustomColor('bg',this.value)"/>
+        </div>
+      </div>
+      <div>
+        <label>Panel / Card</label>
+        <div class="color-picker-row">
+          <input type="color" id="colorPanel" value="#fbf5e8" onchange="setCustomColor('panel',this.value)"/>
+          <input type="text" id="colorPanelHex" value="#fbf5e8" onchange="setCustomColor('panel',this.value)"/>
+        </div>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-sm" onclick="applyCustomPreset()">✓ Apply Custom Colors</button>
+      <button class="btn btn-sm btn-secondary" onclick="resetCustomColors()">↺ Reset</button>
+    </div>
+  </div>
+
+  <!-- STORES MANAGEMENT -->
+  <div class="settings-section">
+    <h3>🏪 Stores Management</h3>
+    <div class="alert info">
+      <span>ℹ️ <strong id="storeCount">0</strong> stores configured. Stock is computed live from green bean deliveries.</span>
+    </div>
+    <div class="flex-between" style="margin-bottom:16px">
+      <span class="text-muted small">Manage your store locations below</span>
+      <button class="btn btn-sm" onclick="addNewStore()">+ Add Store</button>
+    </div>
+    <div id="storesEditGrid"></div>
+    <div class="section-divider"></div>
+    <h3 style="margin-bottom:10px">⚠️ Low-Stock Alert Threshold</h3>
+    <p class="text-muted small" style="margin-bottom:14px">Stores below this level will show a warning on the dashboard.</p>
+    <div class="form-row">
+      <div><label>Threshold (kg)</label><input type="number" id="lowThreshold" value="5" min="0" step="0.5"/></div>
+      <div style="display:flex;align-items:flex-end"><button class="btn" onclick="saveThreshold()">Save Threshold</button></div>
+    </div>
+  </div>
+
+  <!-- COFFEE INVENTORY MANAGEMENT -->
+  <div class="settings-section">
+    <h3>☕ Coffee Inventory Management</h3>
+    <p class="text-muted small" style="margin-bottom:16px">Manually add or remove coffee origins, suppliers, and bean names. These appear as options in the "Log New Delivery" form. Removing an item here only deletes it from the dropdown — existing delivery records stay intact.</p>
+
+    <!-- ORIGINS -->
+    <div class="inv-block">
+      <div class="inv-block-header">
+        <h4>🌍 Origins / Countries</h4>
+        <span class="inv-count" id="originsCount">0</span>
+      </div>
+      <div id="originsList" class="inv-chip-list"></div>
+      <div class="inv-add-row">
+        <input type="text" id="newOriginInput" placeholder="e.g. Ethiopia Yirgacheffe"/>
+        <button class="btn btn-sm" onclick="addOrigin()">+ Add Origin</button>
+      </div>
+    </div>
+
+    <!-- SUPPLIERS -->
+    <div class="inv-block">
+      <div class="inv-block-header">
+        <h4>🏢 Suppliers</h4>
+        <span class="inv-count" id="suppliersCount">0</span>
+      </div>
+      <div id="suppliersList" class="inv-chip-list"></div>
+      <div class="inv-add-row">
+        <input type="text" id="newSupplierInput" placeholder="e.g. Al Maya Coffee Co."/>
+        <button class="btn btn-sm" onclick="addSupplier()">+ Add Supplier</button>
+      </div>
+    </div>
+
+    <!-- BEAN NAMES -->
+    <div class="inv-block">
+      <div class="inv-block-header">
+        <h4>🫘 Bean Names</h4>
+        <span class="inv-count" id="beanNamesCount">0</span>
+      </div>
+      <div id="beanNamesList" class="inv-chip-list"></div>
+      <div class="inv-add-row">
+        <input type="text" id="newBeanNameInput" placeholder="e.g. Natural Process, Washed..."/>
+        <button class="btn btn-sm" onclick="addBeanName()">+ Add Bean Name</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TYPOGRAPHY -->
+  <div class="settings-section">
+    <h3>🎨 Typography &amp; Appearance</h3>
+    <p class="text-muted small" style="margin-bottom:14px">Customize fonts for numbers and body text. Changes apply instantly across the dashboard.</p>
+    <div class="form-row three">
+      <div>
+        <label>Number Font</label>
+        <select id="fontNumSel" onchange="applyFonts()">
+          <option value="'Cormorant Garamond',serif">Cormorant Garamond (Default)</option>
+          <option value="'Playfair Display',serif">Playfair Display</option>
+          <option value="'DM Serif Display',serif">DM Serif Display</option>
+          <option value="'Libre Caslon Text',serif">Libre Caslon</option>
+          <option value="'Outfit',sans-serif">Outfit (Modern)</option>
+          <option value="'Inter',sans-serif">Inter (Clean)</option>
+          <option value="'Roboto Mono',monospace">Roboto Mono</option>
+          <option value="'Montserrat',sans-serif">Montserrat</option>
+        </select>
+      </div>
+      <div>
+        <label>Word / Body Font</label>
+        <select id="fontBodySel" onchange="applyFonts()">
+          <option value="'Outfit',sans-serif">Outfit (Default)</option>
+          <option value="'Inter',sans-serif">Inter</option>
+          <option value="'Poppins',sans-serif">Poppins</option>
+          <option value="'Montserrat',sans-serif">Montserrat</option>
+          <option value="'Lato',sans-serif">Lato</option>
+          <option value="'Cormorant Garamond',serif">Cormorant Garamond</option>
+          <option value="'Playfair Display',serif">Playfair Display</option>
+        </select>
+      </div>
+      <div>
+        <label>Text Size</label>
+        <select id="fontScaleSel" onchange="applyFonts()">
+          <option value="0.9">Compact</option>
+          <option value="1" selected>Standard</option>
+          <option value="1.08">Comfortable</option>
+          <option value="1.18">Large</option>
+        </select>
+      </div>
+    </div>
+    <div class="typography-preview">
+      <div class="typo-preview-num">1,247.<span style="opacity:.6">5 kg</span></div>
+      <div class="typo-preview-word">Windmill Cafe Roastery — The quick brown fox jumps over the lazy dog</div>
+    </div>
+    <div class="btn-row"><button class="btn btn-secondary btn-sm" onclick="resetFonts()">↺ Reset to Default</button></div>
+  </div>
+
+  <!-- ROAST LEVELS -->
+  <div class="settings-section">
+    <h3>🔥 Roast Levels</h3>
+    <p class="text-muted small" style="margin-bottom:14px">Manage the roast level options that appear in the roasting form. Add your own custom levels or remove ones you don't use.</p>
+    <div id="roastLevelsList" class="roast-levels-list"></div>
+    <div class="form-row" style="margin-top:14px;align-items:flex-end">
+      <div><label>New Roast Level</label><input type="text" id="newRoastLevel" placeholder="e.g. French Roast, Cinnamon, City+"/></div>
+      <div><button class="btn" onclick="addRoastLevel()">+ Add Roast Level</button></div>
+    </div>
+  </div>
+
+  <!-- ACCOUNT -->
+  <div class="settings-section">
+    <h3>🔐 Change Password</h3>
+    <div class="form-row three">
+      <div><label>Current Password</label><input type="password" id="s-cur-pass" placeholder="Current password"/></div>
+      <div><label>New Password</label><input type="password" id="s-new-pass" placeholder="New password"/></div>
+      <div><label>Confirm New Password</label><input type="password" id="s-con-pass" placeholder="Confirm new password"/></div>
+    </div>
+    <div class="btn-row"><button class="btn" onclick="changePassword()">Update Password</button></div>
+  </div>
+  <div class="settings-section">
+    <h3>👤 Change Username</h3>
+    <div class="form-row">
+      <div><label>New Username</label><input type="text" id="s-new-user" placeholder="Enter new username"/></div>
+      <div><label>Current Password</label><input type="password" id="s-user-pass" placeholder="To confirm identity"/></div>
+    </div>
+    <div class="btn-row"><button class="btn" onclick="changeUsername()">Update Username</button></div>
+  </div>
+
+  <!-- DATA MANAGEMENT -->
+  <div class="settings-section">
+    <h3>💾 Data Management</h3>
+    <div class="settings-row">
+      <div class="settings-row-info"><p>Export JSON Backup</p><span>Download all data as JSON</span></div>
+      <button class="btn btn-secondary btn-sm" onclick="exportData()">Export</button>
+    </div>
+    <div class="settings-row">
+      <div class="settings-row-info"><p>Import JSON Backup</p><span>Restore from a JSON backup file</span></div>
+      <button class="btn btn-secondary btn-sm" onclick="importData()">Import</button>
+    </div>
+  </div>
+
+  <!-- DANGER ZONE -->
+  <div class="danger-zone">
+    <h3>⚠️ Danger Zone</h3>
+    <div class="settings-row">
+      <div class="settings-row-info"><p>Reset All Data</p><span>Permanently delete everything. Cannot be undone.</span></div>
+      <button class="btn btn-danger btn-sm" onclick="resetAll()">Reset All</button>
+    </div>
+    <div class="settings-row">
+      <div class="settings-row-info"><p>Clear Roasting History</p><span>Delete all roasting records only.</span></div>
+      <button class="btn btn-danger btn-sm" onclick="clearRoastingHistory()">Clear Roasting</button>
+    </div>
+    <div class="settings-row">
+      <div class="settings-row-info"><p>Clear Green Bean Records</p><span>Delete all green bean inventory only.</span></div>
+      <button class="btn btn-danger btn-sm" onclick="clearGreenBeansData()">Clear Green Beans</button>
+    </div>
+  </div>
+</section>
+
+</main>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeEditModal()">✕</button>
+    <h3 id="editModalTitle">Edit Record</h3>
+    <div id="editModalBody"></div>
+    <div class="btn-row" style="margin-top:20px">
+      <button class="btn" id="editModalSave">Save Changes</button>
+      <button class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Password Confirm Modal -->
+<div class="modal-overlay" id="pwModal">
+  <div class="pw-modal-inner">
+    <span class="pw-modal-icon">🔒</span>
+    <div class="pw-modal-title" id="pwModalTitle">Admin Confirmation</div>
+    <div class="pw-modal-sub" id="pwModalSub">Enter the admin password to continue.</div>
+    <div class="pw-modal-field">
+      <input type="password" id="pwInput" placeholder="Enter password" autocomplete="off"
+             onkeydown="if(event.key==='Enter')pwConfirm()"/>
+      <button class="pw-toggle" onclick="pwToggleVis()" title="Show/hide">👁</button>
+    </div>
+    <div class="pw-error" id="pwError">Incorrect password. Please try again.</div>
+    <div class="pw-btn-row">
+      <button class="btn" onclick="pwConfirm()">✓ Confirm</button>
+      <button class="btn btn-secondary" onclick="pwCancel()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ===== ADMIN PASSWORD ===== */
+const ADMIN_PASS = '1234'; // ← change this to your preferred password
+
+/* ===== PASSWORD GUARD ===== */
+let _pwCallback = null;
+let _pwAttempts = 0;
+
+function requirePassword(title, subText, callback) {
+  _pwCallback = callback;
+  _pwAttempts = 0;
+  const modal = document.getElementById('pwModal');
+  const input = document.getElementById('pwInput');
+  const err   = document.getElementById('pwError');
+  document.getElementById('pwModalTitle').textContent = title || 'Admin Confirmation';
+  document.getElementById('pwModalSub').textContent   = subText || 'Enter the admin password to continue.';
+  input.value = '';
+  input.type  = 'password';
+  err.classList.remove('show');
+  modal.classList.add('show');
+  setTimeout(() => input.focus(), 80);
+}
+
+function pwConfirm() {
+  const input = document.getElementById('pwInput');
+  const err   = document.getElementById('pwError');
+  if (input.value === ADMIN_PASS) {
+    document.getElementById('pwModal').classList.remove('show');
+    input.value = '';
+    err.classList.remove('show');
+    if (typeof _pwCallback === 'function') _pwCallback();
+    _pwCallback = null;
+  } else {
+    _pwAttempts++;
+    err.textContent = _pwAttempts >= 3
+      ? `Incorrect password (${_pwAttempts} attempts). Please check and try again.`
+      : 'Incorrect password. Please try again.';
+    err.classList.add('show');
+    const inner = document.querySelector('.pw-modal-inner');
+    inner.classList.remove('pw-shake');
+    void inner.offsetWidth; // reflow to restart animation
+    inner.classList.add('pw-shake');
+    input.value = '';
+    input.focus();
+  }
+}
+
+function pwCancel() {
+  document.getElementById('pwModal').classList.remove('show');
+  document.getElementById('pwInput').value = '';
+  document.getElementById('pwError').classList.remove('show');
+  _pwCallback = null;
+}
+
+function pwToggleVis() {
+  const input = document.getElementById('pwInput');
+  const btn   = document.querySelector('.pw-toggle');
+  if (input.type === 'password') { input.type = 'text'; btn.textContent = '🙈'; }
+  else                           { input.type = 'password'; btn.textContent = '👁'; }
+}
+
+// Close on backdrop click
+document.getElementById('pwModal').addEventListener('click', function(e) {
+  if (e.target === this) pwCancel();
+});
+
+/* ===== CLOCK ===== */
+function updateClock(){
+  const now=new Date();
+  const h=String(now.getHours()).padStart(2,'0');
+  const m=String(now.getMinutes()).padStart(2,'0');
+  const s=String(now.getSeconds()).padStart(2,'0');
+  const el=document.getElementById('simpleClock');
+  if(el)el.textContent=`${h}:${m}:${s}`;
+}
+setInterval(updateClock,1000);
+updateClock();
+
+/* ===== AUTH ===== */
+const AUTH_KEY='windmill_auth_v1';
+function getAuth(){try{const r=localStorage.getItem(AUTH_KEY);if(!r)return{username:'admin',password:'windmill2024'};return JSON.parse(r);}catch(e){return{username:'admin',password:'windmill2024'};}}
+function saveAuth(a){localStorage.setItem(AUTH_KEY,JSON.stringify(a));}
+function doLogin(){
+  const u=document.getElementById('loginUser').value.trim();
+  const p=document.getElementById('loginPass').value;
+  const auth=getAuth();
+  if(u===auth.username&&p===auth.password){
+    document.getElementById('loginOverlay').style.display='none';
+    document.getElementById('appShell').style.display='block';
+    document.getElementById('loginError').classList.remove('show');
+    init();
+  }else{
+    document.getElementById('loginError').classList.add('show');
+    document.getElementById('loginPass').value='';
+    document.getElementById('loginPass').focus();
+  }
+}
+function doLogout(){
+  if(!confirm('Sign out?'))return;
+  document.getElementById('appShell').style.display='none';
+  document.getElementById('loginOverlay').style.display='flex';
+  document.getElementById('loginUser').value='';document.getElementById('loginPass').value='';
+  document.getElementById('loginError').classList.remove('show');
+}
+function changePassword(){
+  const cur=document.getElementById('s-cur-pass').value;
+  const nw=document.getElementById('s-new-pass').value;
+  const cn=document.getElementById('s-con-pass').value;
+  const auth=getAuth();
+  if(cur!==auth.password){toast('Current password incorrect','error');return;}
+  if(!nw||nw.length<4){toast('New password needs at least 4 characters','error');return;}
+  if(nw!==cn){toast('Passwords do not match','error');return;}
+  auth.password=nw;saveAuth(auth);
+  ['s-cur-pass','s-new-pass','s-con-pass'].forEach(i=>document.getElementById(i).value='');
+  toast('Password updated successfully');
+}
+function changeUsername(){
+  const newU=document.getElementById('s-new-user').value.trim();
+  const curP=document.getElementById('s-user-pass').value;
+  const auth=getAuth();
+  if(curP!==auth.password){toast('Incorrect password','error');return;}
+  if(!newU||newU.length<2){toast('Username too short','error');return;}
+  auth.username=newU;saveAuth(auth);
+  document.getElementById('s-new-user').value='';document.getElementById('s-user-pass').value='';
+  toast('Username updated to: '+newU);
+}
+
+/* ===== DATA ===== */
+const KEY='windmillRoastery_v9';
+const defaultData={
+  greenBeans:[],roasting:[],movements:[],
+  stores:[{id:'s1',name:'Store 1',location:'Branch 1',safetyStock:10},{id:'s2',name:'Store 2',location:'Branch 2',safetyStock:10}],
+  lowThreshold:5,
+  knownOrigins:[],knownSuppliers:[],knownBeanNames:[],
+  roastLevels:['Light','Medium-Light','Medium','Medium-Dark','Dark','Espresso'],
+  prefs:{theme:'cream',fontNum:"'Playfair Display',serif",fontBody:"'Inter',sans-serif",fontScale:'1',role:'Storekeeper',accent:'coffee',customColors:null}
+};
+
+/* ---- Sync status helpers ---- */
+function setSyncStatus(status, label){
+  const el=document.getElementById('syncIndicator');
+  const lb=document.getElementById('syncLabel');
+  if(!el||!lb)return;
+  el.className='sync-indicator '+status;
+  lb.textContent=label;
+}
+
+/* ---- Merge incoming Firebase snapshot with defaultData shape ---- */
+function mergeData(p){
+  if(!p)return JSON.parse(JSON.stringify(defaultData));
+  if(p.stores)p.stores=p.stores.map(s=>{const{stock,...rest}=s;return rest;});
+  const merged=Object.assign(JSON.parse(JSON.stringify(defaultData)),p);
+  if(!merged.roastLevels||!merged.roastLevels.length)merged.roastLevels=[...defaultData.roastLevels];
+  if(!merged.prefs)merged.prefs={...defaultData.prefs};
+  else merged.prefs=Object.assign({...defaultData.prefs},merged.prefs);
+  if(!merged.knownOrigins||merged.knownOrigins.length===0)
+    merged.knownOrigins=[...new Set(merged.greenBeans.map(g=>g.origin).filter(Boolean))];
+  if(!merged.knownSuppliers||merged.knownSuppliers.length===0)
+    merged.knownSuppliers=[...new Set(merged.greenBeans.map(g=>g.supplier).filter(Boolean))];
+  if(!merged.knownBeanNames)
+    merged.knownBeanNames=[...new Set(merged.greenBeans.map(g=>g.beanName).filter(Boolean))];
+  return merged;
+}
+
+/* ---- Local fallback (read) ---- */
+function loadDataLocal(){
+  try{
+    const r=localStorage.getItem(KEY)||localStorage.getItem('windmillRoastery_v4')||localStorage.getItem('windmillRoastery_v3');
+    if(!r)return JSON.parse(JSON.stringify(defaultData));
+    return mergeData(JSON.parse(r));
+  }catch(e){return JSON.parse(JSON.stringify(defaultData));}
+}
+
+/* Initialise from localStorage so UI is instant, then Firebase overwrites */
+let data = loadDataLocal();
+
+/* ---- Firebase real-time listener — attaches after login ---- */
+let _fbListenerAttached = false;
+function attachFirebaseListener(){
+  if(_fbListenerAttached)return;
+  _fbListenerAttached = true;
+  setSyncStatus('syncing','SYNCING');
+  db.ref(FB_PATH).on('value', snapshot => {
+    const fbData = snapshot.val();
+    if(fbData){
+      data = mergeData(fbData);
+      /* keep local copy in sync */
+      try{localStorage.setItem(KEY, JSON.stringify(data));}catch(e){}
+      renderAll();
+    }
+    setSyncStatus('synced','SYNCED');
+  }, err => {
+    console.warn('Firebase read error:', err);
+    setSyncStatus('offline','OFFLINE');
+  });
+
+  /* Monitor connection state */
+  db.ref('.info/connected').on('value', snap => {
+    if(snap.val()===true){
+      setSyncStatus('synced','SYNCED');
+    } else {
+      setSyncStatus('offline','OFFLINE');
+    }
+  });
+}
+
+/* ---- saveData — writes to Firebase + local fallback ---- */
+let _saveTimer = null;
+function saveData(){
+  /* Always update localStorage immediately */
+  try{localStorage.setItem(KEY, JSON.stringify(data));}
+  catch(e){toast('Local storage full','error');}
+
+  /* Debounce Firebase writes by 600 ms to batch rapid changes */
+  clearTimeout(_saveTimer);
+  setSyncStatus('syncing','SAVING');
+  _saveTimer = setTimeout(()=>{
+    db.ref(FB_PATH).set(JSON.parse(JSON.stringify(data)))
+      .then(()=>{ setSyncStatus('synced','SYNCED'); })
+      .catch(err=>{
+        console.warn('Firebase write error:', err);
+        setSyncStatus('offline','OFFLINE');
+        toast('Cloud save failed — data saved locally','warn');
+      });
+  }, 600);
+}
+
+/* ===== THEME ===== */
+function applyTheme(){
+  const t=data.prefs.theme||'cream';
+  document.body.classList.toggle('theme-dark',t==='dark');
+  const btn=document.getElementById('themeToggleBtn');
+  if(btn)btn.textContent=(t==='dark')?'☀':'🌙';
+}
+function toggleTheme(){
+  data.prefs.theme=(data.prefs.theme==='dark')?'cream':'dark';
+  saveData();applyTheme();
+  toast(`Theme: ${data.prefs.theme==='dark'?'Coffee Night':'Cream'}`);
+}
+
+/* ===== ROLE ===== */
+function applyRole(){
+  const r=(data.prefs.role||'Storekeeper').toUpperCase();
+  const el=document.getElementById('roleBadge');
+  if(el)el.textContent=r;
+}
+function setRole(val){
+  data.prefs.role=val;
+  saveData();applyRole();
+  toast(`Role: ${val}`);
+}
+function setTheme(val){
+  data.prefs.theme=val;
+  saveData();applyTheme();
+  toast(`Theme: ${val==='dark'?'Coffee Night':'Cream'}`);
+}
+function setAccent(val){
+  data.prefs.accent=val;
+  saveData();applyAccent();
+  toast(`Accent: ${val}`);
+}
+function applyAccent(){
+  const a=data.prefs.accent||'coffee';
+  document.body.setAttribute('data-accent',a);
+  // If switching to a preset (not custom), clear inline custom styles
+  if(a!=='custom'){
+    const root=document.documentElement;
+    ['--coffee','--gold','--bg','--panel'].forEach(v=>root.style.removeProperty(v));
+  }else{
+    applyCustomColors();
+  }
+}
+function applyCustomColors(){
+  const cc=data.prefs.customColors;
+  if(!cc||data.prefs.accent!=='custom')return;
+  const root=document.documentElement;
+  if(cc.header)root.style.setProperty('--coffee',cc.header);
+  if(cc.accent)root.style.setProperty('--gold',cc.accent);
+  if(cc.bg)root.style.setProperty('--bg',cc.bg);
+  if(cc.panel)root.style.setProperty('--panel',cc.panel);
+}
+function setCustomColor(key,val){
+  // Keep hex input and color input in sync
+  if(!/^#[0-9a-fA-F]{6}$/.test(val)&&!/^#[0-9a-fA-F]{3}$/.test(val))return;
+  const c=document.getElementById('color'+key.charAt(0).toUpperCase()+key.slice(1));
+  const h=document.getElementById('color'+key.charAt(0).toUpperCase()+key.slice(1)+'Hex');
+  if(c)c.value=val;
+  if(h)h.value=val;
+  if(!data.prefs.customColors)data.prefs.customColors={};
+  data.prefs.customColors[key]=val;
+}
+function applyCustomPreset(){
+  if(!data.prefs.customColors){toast('Pick at least one color first','error');return;}
+  data.prefs.accent='custom';
+  saveData();applyAccent();
+  const ac=document.getElementById('accentSelect');
+  if(ac)ac.value='custom';
+  toast('Custom colors applied');
+}
+function resetCustomColors(){
+  data.prefs.customColors=null;
+  data.prefs.accent='coffee';
+  saveData();
+  ['colorHeader','colorAccent','colorBg','colorPanel'].forEach(id=>{
+    const defaults={colorHeader:'#4a2a0f',colorAccent:'#b08e4a',colorBg:'#f4ece0',colorPanel:'#fbf5e8'};
+    const e=document.getElementById(id);
+    const h=document.getElementById(id+'Hex');
+    if(e)e.value=defaults[id];
+    if(h)h.value=defaults[id];
+  });
+  applyAccent();
+  const ac=document.getElementById('accentSelect');
+  if(ac)ac.value='coffee';
+  toast('Custom colors reset','warn');
+}
+function loadCustomColorsIntoUI(){
+  const cc=data.prefs.customColors;
+  if(!cc)return;
+  const map={header:'colorHeader',accent:'colorAccent',bg:'colorBg',panel:'colorPanel'};
+  Object.entries(map).forEach(([k,id])=>{
+    if(cc[k]){
+      const e=document.getElementById(id);
+      const h=document.getElementById(id+'Hex');
+      if(e)e.value=cc[k];
+      if(h)h.value=cc[k];
+    }
+  });
+}
+function loadControlPanel(){
+  const r=document.getElementById('roleSelect');
+  const t=document.getElementById('themeSelect');
+  const ac=document.getElementById('accentSelect');
+  if(r)r.value=data.prefs.role||'Storekeeper';
+  if(t)t.value=data.prefs.theme||'cream';
+  if(ac)ac.value=data.prefs.accent||'coffee';
+  loadCustomColorsIntoUI();
+}
+
+/* ===== FONTS ===== */
+function applyFonts(){
+  const numSel=document.getElementById('fontNumSel');
+  const bodySel=document.getElementById('fontBodySel');
+  const scaleSel=document.getElementById('fontScaleSel');
+  if(numSel&&bodySel&&scaleSel){
+    data.prefs.fontNum=numSel.value;
+    data.prefs.fontBody=bodySel.value;
+    data.prefs.fontScale=scaleSel.value;
+    saveData();
+  }
+  const root=document.documentElement;
+  root.style.setProperty('--font-num',data.prefs.fontNum);
+  root.style.setProperty('--font-body',data.prefs.fontBody);
+  root.style.setProperty('--font-scale',data.prefs.fontScale);
+}
+function loadFontsIntoUI(){
+  const numSel=document.getElementById('fontNumSel');
+  const bodySel=document.getElementById('fontBodySel');
+  const scaleSel=document.getElementById('fontScaleSel');
+  if(numSel)numSel.value=data.prefs.fontNum;
+  if(bodySel)bodySel.value=data.prefs.fontBody;
+  if(scaleSel)scaleSel.value=data.prefs.fontScale;
+  const root=document.documentElement;
+  root.style.setProperty('--font-num',data.prefs.fontNum);
+  root.style.setProperty('--font-body',data.prefs.fontBody);
+  root.style.setProperty('--font-scale',data.prefs.fontScale);
+}
+function resetFonts(){
+  data.prefs.fontNum="'Cormorant Garamond',serif";
+  data.prefs.fontBody="'Outfit',sans-serif";
+  data.prefs.fontScale='1';
+  saveData();loadFontsIntoUI();toast('Fonts reset to default');
+}
+
+/* ===== ROAST LEVELS ===== */
+function renderRoastLevels(){
+  const container=document.getElementById('roastLevelsList');
+  if(!container)return;
+  if(!data.roastLevels||data.roastLevels.length===0){
+    container.innerHTML='<p class="text-muted small">No roast levels yet — add one below.</p>';
+  }else{
+    container.innerHTML=data.roastLevels.map(lvl=>`
+      <div class="roast-level-chip">
+        <span>${escapeHtml(lvl)}</span>
+        <button class="chip-remove" onclick="removeRoastLevel('${escapeHtml(lvl).replace(/'/g,"\\'")}')" title="Remove">✕</button>
+      </div>
+    `).join('');
+  }
+  // Also refresh the roasting form dropdown to stay in sync
+  refreshRoastLevelDropdown();
+}
+function addRoastLevel(){
+  const input=document.getElementById('newRoastLevel');
+  const val=input.value.trim();
+  if(!val){toast('Enter a roast level name','error');return;}
+  if(data.roastLevels.includes(val)){toast('That level already exists','error');return;}
+  data.roastLevels.push(val);
+  saveData();input.value='';renderRoastLevels();
+  toast(`Added: ${val}`);
+}
+function removeRoastLevel(lvl){
+  if(data.roastLevels.length<=1){toast('Must keep at least one roast level','error');return;}
+  if(!confirm(`Remove roast level "${lvl}"?`))return;
+  data.roastLevels=data.roastLevels.filter(l=>l!==lvl);
+  saveData();renderRoastLevels();
+  toast(`Removed: ${lvl}`,'warn');
+}
+function refreshRoastLevelDropdown(){
+  const sel=document.getElementById('r-level');
+  if(!sel)return;
+  const cur=sel.value;
+  sel.innerHTML=data.roastLevels.map(l=>`<option${l==='Medium'?' selected':''}>${escapeHtml(l)}</option>`).join('');
+  if(cur&&data.roastLevels.includes(cur))sel.value=cur;
+}
+
+/* ===== COFFEE INVENTORY (origins / suppliers / bean names) ===== */
+function renderInventoryLists(){
+  // Origins
+  const oList=document.getElementById('originsList');
+  const oCount=document.getElementById('originsCount');
+  if(oList){
+    oCount.textContent=data.knownOrigins.length;
+    oList.innerHTML=data.knownOrigins.length===0
+      ?'<p class="inv-empty">No origins yet — add your first one below.</p>'
+      :data.knownOrigins.map(o=>`
+        <div class="inv-chip">
+          <span>${getOriginEmoji(o)} ${escapeHtml(o)}</span>
+          <button class="chip-remove" onclick="removeOrigin('${escapeHtml(o).replace(/'/g,"\\'")}')" title="Remove origin">✕</button>
+        </div>`).join('');
+  }
+  // Suppliers
+  const sList=document.getElementById('suppliersList');
+  const sCount=document.getElementById('suppliersCount');
+  if(sList){
+    sCount.textContent=data.knownSuppliers.length;
+    sList.innerHTML=data.knownSuppliers.length===0
+      ?'<p class="inv-empty">No suppliers yet — add your first one below.</p>'
+      :data.knownSuppliers.map(s=>`
+        <div class="inv-chip">
+          <span>🏢 ${escapeHtml(s)}</span>
+          <button class="chip-remove" onclick="removeSupplier('${escapeHtml(s).replace(/'/g,"\\'")}')" title="Remove supplier">✕</button>
+        </div>`).join('');
+  }
+  // Bean Names
+  const bList=document.getElementById('beanNamesList');
+  const bCount=document.getElementById('beanNamesCount');
+  if(bList){
+    bCount.textContent=data.knownBeanNames.length;
+    bList.innerHTML=data.knownBeanNames.length===0
+      ?'<p class="inv-empty">No bean names yet — add your first one below.</p>'
+      :data.knownBeanNames.map(b=>`
+        <div class="inv-chip">
+          <span>🫘 ${escapeHtml(b)}</span>
+          <button class="chip-remove" onclick="removeBeanName('${escapeHtml(b).replace(/'/g,"\\'")}')" title="Remove bean name">✕</button>
+        </div>`).join('');
+  }
+  // Refresh dropdowns used in the Log New Delivery form
+  refreshOriginDropdown();
+  refreshSupplierDropdown();
+  refreshBeanNameDropdown();
+}
+function addOrigin(){
+  const input=document.getElementById('newOriginInput');
+  const val=input.value.trim();
+  if(!val){toast('Enter an origin name','error');return;}
+  if(data.knownOrigins.includes(val)){toast('Origin already exists','error');return;}
+  data.knownOrigins.push(val);data.knownOrigins.sort();
+  saveData();input.value='';renderInventoryLists();
+  toast(`Added origin: ${val}`);
+}
+function removeOrigin(name){
+  const inUse=data.greenBeans.some(g=>g.origin===name);
+  const msg=inUse
+    ?`"${name}" is used in ${data.greenBeans.filter(g=>g.origin===name).length} delivery record(s). Those records will keep the origin, but it will be removed from the dropdown. Continue?`
+    :`Remove origin "${name}" from the list?`;
+  if(!confirm(msg))return;
+  data.knownOrigins=data.knownOrigins.filter(o=>o!==name);
+  saveData();renderInventoryLists();
+  toast(`Removed origin: ${name}`,'warn');
+}
+function addSupplier(){
+  const input=document.getElementById('newSupplierInput');
+  const val=input.value.trim();
+  if(!val){toast('Enter a supplier name','error');return;}
+  if(data.knownSuppliers.includes(val)){toast('Supplier already exists','error');return;}
+  data.knownSuppliers.push(val);data.knownSuppliers.sort();
+  saveData();input.value='';renderInventoryLists();
+  toast(`Added supplier: ${val}`);
+}
+function removeSupplier(name){
+  const inUse=data.greenBeans.some(g=>g.supplier===name);
+  const msg=inUse
+    ?`"${name}" is used in ${data.greenBeans.filter(g=>g.supplier===name).length} delivery record(s). Those records will keep the supplier, but it will be removed from the dropdown. Continue?`
+    :`Remove supplier "${name}" from the list?`;
+  if(!confirm(msg))return;
+  data.knownSuppliers=data.knownSuppliers.filter(s=>s!==name);
+  saveData();renderInventoryLists();
+  toast(`Removed supplier: ${name}`,'warn');
+}
+function addBeanName(){
+  const input=document.getElementById('newBeanNameInput');
+  const val=input.value.trim();
+  if(!val){toast('Enter a bean name','error');return;}
+  if(data.knownBeanNames.includes(val)){toast('Bean name already exists','error');return;}
+  data.knownBeanNames.push(val);data.knownBeanNames.sort();
+  saveData();input.value='';renderInventoryLists();
+  toast(`Added bean name: ${val}`);
+}
+function removeBeanName(name){
+  if(!confirm(`Remove bean name "${name}" from the list?`))return;
+  data.knownBeanNames=data.knownBeanNames.filter(b=>b!==name);
+  saveData();renderInventoryLists();
+  toast(`Removed bean name: ${name}`,'warn');
+}
+
+function refreshBeanNameDropdown(){
+  const sel=document.getElementById('gb-bean-name-sel');
+  if(!sel)return;
+  const cur=sel.value;
+  sel.innerHTML='<option value="">— Select Bean Name —</option>'+
+    data.knownBeanNames.map(b=>`<option value="${escapeHtml(b)}">${escapeHtml(b)}</option>`).join('')+
+    '<option value="__new__">+ Add New Bean Name</option>';
+  sel.value=cur;
+}
+function handleBeanNameSel(val){
+  const wrap=document.getElementById('gb-bean-name-new-wrap');
+  if(wrap)wrap.style.display=(val==='__new__')?'block':'none';
+}
+
+/* ===== COMPUTED ===== */
+function getStoreBalance(storeId){return data.greenBeans.filter(g=>g.storeId===storeId).reduce((s,g)=>s+g.remaining,0);}
+function getAllStoreBalances(){return data.stores.map(s=>({...s,balance:getStoreBalance(s.id)}));}
+
+/* ===== UTILITIES ===== */
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
+function fmt(n){return Number(n).toFixed(1);}
+function todayISO(){return new Date().toISOString().slice(0,10);}
+function formatDate(iso){if(!iso)return'—';const d=new Date(iso+'T00:00:00');return d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});}
+function escapeHtml(str){if(str==null)return'';return String(str).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function toast(msg,type='success'){
+  const t=document.getElementById('toast');
+  const icons={success:'✓',error:'✕',warn:'⚠'};
+  t.innerHTML=`<span style="color:${type==='error'?'var(--red)':type==='warn'?'var(--gold)':'var(--green)'}">${icons[type]||'✓'}</span> ${escapeHtml(msg)}`;
+  t.style.borderColor=type==='error'?'var(--red)':type==='warn'?'var(--gold)':'var(--green)';
+  t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3000);
+}
+function getStockStatus(balance){if(balance<=0)return'status-empty';if(balance<data.lowThreshold)return'status-low';return'status-good';}
+function getStockLabel(balance){if(balance<=0)return'Out of Stock';if(balance<data.lowThreshold)return'Low Stock';return'In Stock';}
+function getOriginEmoji(origin){
+  // Flag emojis disabled by user preference — return empty string
+  return '';
+}
+function getWeekNumber(dateStr){
+  const d=new Date(dateStr+'T00:00:00');
+  d.setHours(0,0,0,0);
+  d.setDate(d.getDate()+3-(d.getDay()+6)%7);
+  const week1=new Date(d.getFullYear(),0,4);
+  return`W${String(1+Math.round(((d.getTime()-week1.getTime())/86400000-3+(week1.getDay()+6)%7)/7)).padStart(2,'0')} ${d.getFullYear()}`;
+}
+function getMonthKey(dateStr){const d=new Date(dateStr+'T00:00:00');return`${d.toLocaleString('en-GB',{month:'long'})} ${d.getFullYear()}`;}
+
+/* ===== TABS ===== */
+function showTab(page){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  const btn=document.querySelector(`.tab[data-page="${page}"]`);
+  if(btn)btn.classList.add('active');
+  const pg=document.getElementById('page-'+page);
+  if(pg)pg.classList.add('active');
+  renderAll();
+}
+document.querySelectorAll('.tab').forEach(btn=>btn.addEventListener('click',()=>showTab(btn.dataset.page)));
+
+/* ===== REPORT TABS ===== */
+function showReportTab(name){
+  document.querySelectorAll('.rtab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.report-view').forEach(v=>v.classList.remove('active'));
+  event.target.classList.add('active');
+  const rv=document.getElementById('rv-'+name);
+  if(rv)rv.classList.add('active');
+}
+function setRange(r){
+  const today=todayISO();
+  const d=new Date();
+  let from=today;
+  if(r==='week'){const s=new Date(d);s.setDate(d.getDate()-d.getDay()+1);from=s.toISOString().slice(0,10);}
+  else if(r==='month'){from=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-01`;}
+  else if(r==='all'){from='2000-01-01';}
+  document.getElementById('rep-from').value=from;
+  document.getElementById('rep-to').value=today;
+  renderReports();
+}
+
+/* ===== ORIGIN / SUPPLIER DROPDOWNS ===== */
+function refreshOriginDropdown(){
+  const sel=document.getElementById('gb-origin-sel');
+  const cur=sel.value;
+  sel.innerHTML='<option value="">— Select Origin —</option>'+
+    data.knownOrigins.map(o=>`<option value="${escapeHtml(o)}">${escapeHtml(o)}</option>`).join('')+
+    '<option value="__new__">+ Add New Origin</option>';
+  sel.value=cur;
+}
+function refreshSupplierDropdown(){
+  const sel=document.getElementById('gb-supplier-sel');
+  const cur=sel.value;
+  sel.innerHTML='<option value="">— Select Supplier —</option>'+
+    data.knownSuppliers.map(s=>`<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('')+
+    '<option value="__new__">+ Add New Supplier</option>';
+  sel.value=cur;
+}
+function handleOriginSel(val){
+  document.getElementById('gb-origin-new-wrap').style.display=(val==='__new__')?'block':'none';
+}
+function handleSupplierSel(val){
+  document.getElementById('gb-supplier-new-wrap').style.display=(val==='__new__')?'block':'none';
+}
+
+/* ===== GREEN BEANS ===== */
+function populateGBStoreDropdown(){
+  const sel=document.getElementById('gb-store');
+  const cur=sel.value;
+  sel.innerHTML='<option value="">— Select Store —</option>'+
+    data.stores.map(s=>`<option value="${s.id}">${escapeHtml(s.name)} — ${escapeHtml(s.location)}</option>`).join('');
+  sel.value=cur;
+}
+function addGreenBean(){
+  const date=document.getElementById('gb-date').value||todayISO();
+  const oSel=document.getElementById('gb-origin-sel').value;
+  const origin=(oSel==='__new__')?document.getElementById('gb-origin-new').value.trim():oSel;
+  const sSel=document.getElementById('gb-supplier-sel').value;
+  const supplier=(sSel==='__new__')?document.getElementById('gb-supplier-new').value.trim():sSel;
+  const bSel=document.getElementById('gb-bean-name-sel').value;
+  const beanName=(bSel==='__new__')?document.getElementById('gb-bean-name-new').value.trim():bSel;
+  const kg=parseFloat(document.getElementById('gb-kg').value);
+  const storeId=document.getElementById('gb-store').value;
+  const batch=document.getElementById('gb-batch').value.trim();
+  const cost=parseFloat(document.getElementById('gb-cost').value)||0;
+  const notes=document.getElementById('gb-notes').value.trim();
+  if(!supplier||!origin||!kg||kg<=0){toast('Fill supplier, origin and quantity','error');return;}
+  if(!storeId){toast('Select a destination store','error');return;}
+  const store=data.stores.find(s=>s.id===storeId);
+  // update known lists
+  if(origin&&!data.knownOrigins.includes(origin)){data.knownOrigins.push(origin);data.knownOrigins.sort();}
+  if(supplier&&!data.knownSuppliers.includes(supplier)){data.knownSuppliers.push(supplier);data.knownSuppliers.sort();}
+  if(beanName&&!data.knownBeanNames.includes(beanName)){data.knownBeanNames.push(beanName);data.knownBeanNames.sort();}
+  data.greenBeans.unshift({id:uid(),date,supplier,origin,beanName,kg,storeId,storeName:store?store.name:'—',batch,cost,notes,remaining:kg});
+  saveData();clearGBForm();renderAll();
+  toast(`${fmt(kg)} kg of ${origin} saved → ${store?store.name:'Store'}`);
+}
+function clearGBForm(){
+  ['gb-kg','gb-batch','gb-cost','gb-notes','gb-origin-new','gb-supplier-new','gb-bean-name-new'].forEach(i=>{const el=document.getElementById(i);if(el)el.value='';});
+  document.getElementById('gb-date').value=todayISO();
+  document.getElementById('gb-store').value='';
+  document.getElementById('gb-origin-sel').value='';
+  document.getElementById('gb-supplier-sel').value='';
+  document.getElementById('gb-bean-name-sel').value='';
+  document.getElementById('gb-origin-new-wrap').style.display='none';
+  document.getElementById('gb-supplier-new-wrap').style.display='none';
+  document.getElementById('gb-bean-name-new-wrap').style.display='none';
+}
+function deleteGreenBean(id){
+  const g=data.greenBeans.find(x=>x.id===id);if(!g)return;
+  const usedInRoasting=g.kg-g.remaining;
+  const detail=usedInRoasting>0
+    ?`Batch has ${fmt(usedInRoasting)} kg used in roasting. Remaining ${fmt(g.remaining)} kg will be removed.`
+    :`Remove delivery: ${escapeHtml(g.origin)}${g.beanName?' – '+escapeHtml(g.beanName):''} (${fmt(g.remaining)} kg remaining)`;
+  requirePassword('Delete Green Bean Record', detail, ()=>{
+    data.greenBeans=data.greenBeans.filter(x=>x.id!==id);
+    saveData();renderAll();toast('Record deleted');
+  });
+}
+function editGreenBean(id){
+  requirePassword('Edit Green Bean Record', 'Password required to modify delivery records.', ()=>{
+    _doEditGreenBean(id);
+  });
+}
+function _doEditGreenBean(id){
+  const g=data.greenBeans.find(x=>x.id===id);if(!g)return;
+  const storeOpts=data.stores.map(s=>`<option value="${s.id}"${g.storeId===s.id?' selected':''}>${escapeHtml(s.name)}</option>`).join('');
+  document.getElementById('editModalTitle').textContent='Edit Green Bean Record';
+  document.getElementById('editModalBody').innerHTML=`
+    <div class="form-row"><div><label>Date</label><input type="date" id="em-date" value="${g.date}"/></div>
+    <div><label>Supplier</label><input type="text" id="em-supplier" value="${escapeHtml(g.supplier)}"/></div></div>
+    <div class="form-row"><div><label>Origin</label><input type="text" id="em-origin" value="${escapeHtml(g.origin)}"/></div>
+    <div><label>Bean Name</label><input type="text" id="em-bean-name" value="${escapeHtml(g.beanName||'')}"/></div></div>
+    <div class="form-row"><div><label>Store</label><select id="em-store">${storeOpts}</select></div>
+    <div><label>Batch</label><input type="text" id="em-batch" value="${escapeHtml(g.batch||'')}"/></div></div>
+    <div class="form-row"><div><label>Received (kg)</label><input type="number" id="em-kg" value="${g.kg}" step="0.1" min="0"/></div>
+    <div><label>Notes</label><input type="text" id="em-notes" value="${escapeHtml(g.notes||'')}"/></div></div>
+  `;
+  document.getElementById('editModalSave').onclick=()=>{
+    const newKg=parseFloat(document.getElementById('em-kg').value)||g.kg;
+    const diff=newKg-g.kg;
+    const sid=document.getElementById('em-store').value;
+    const store=data.stores.find(s=>s.id===sid);
+    g.date=document.getElementById('em-date').value||g.date;
+    g.supplier=document.getElementById('em-supplier').value.trim()||g.supplier;
+    g.origin=document.getElementById('em-origin').value.trim()||g.origin;
+    g.beanName=document.getElementById('em-bean-name').value.trim();
+    g.storeId=sid;g.storeName=store?store.name:'—';
+    g.batch=document.getElementById('em-batch').value.trim();
+    g.notes=document.getElementById('em-notes').value.trim();
+    g.kg=newKg;g.remaining=Math.max(0,g.remaining+diff);
+    saveData();renderAll();closeEditModal();toast('Record updated');
+  };
+  document.getElementById('editModal').classList.add('show');
+}
+
+function renderGreenBeans(){
+  populateGBStoreDropdown();
+  refreshOriginDropdown();
+  refreshSupplierDropdown();
+  // populate roasting source dropdown
+  const sel=document.getElementById('r-source');
+  const cur=sel.value;
+  sel.innerHTML='<option value="">— Select batch —</option>'+
+    data.greenBeans.filter(g=>g.remaining>0).map(g=>
+      `<option value="${g.id}">${getOriginEmoji(g.origin)} ${escapeHtml(g.origin)}${g.beanName?' – '+escapeHtml(g.beanName):''} [${escapeHtml(g.storeName||'?')}] (${fmt(g.remaining)} kg)</option>`
+    ).join('');
+  sel.value=cur;
+
+  // Group by origin
+  const container=document.getElementById('gbOriginSections');
+  if(data.greenBeans.length===0){
+    container.innerHTML='<div class="panel"><p class="text-muted" style="text-align:center;padding:30px">No deliveries yet. Add your first green bean delivery above.</p></div>';
+    return;
+  }
+  const byOrigin={};
+  data.greenBeans.forEach(g=>{
+    if(!byOrigin[g.origin])byOrigin[g.origin]=[];
+    byOrigin[g.origin].push(g);
+  });
+  const total=data.greenBeans.reduce((s,g)=>s+g.remaining,0);
+  container.innerHTML=Object.entries(byOrigin).sort((a,b)=>{
+    const ra=a[1].reduce((s,g)=>s+g.remaining,0);
+    const rb=b[1].reduce((s,g)=>s+g.remaining,0);
+    return rb-ra;
+  }).map(([origin,beans])=>{
+    const totalRem=beans.reduce((s,g)=>s+g.remaining,0);
+    const totalRec=beans.reduce((s,g)=>s+g.kg,0);
+    const suppliers=[...new Set(beans.map(g=>g.supplier))];
+    return `<div class="origin-section">
+      <div class="origin-section-header">
+        <div class="origin-section-title">${getOriginEmoji(origin)} ${escapeHtml(origin)}</div>
+        <div class="origin-kpis">
+          <div class="origin-kpi-chip"><div class="origin-kpi-chip-val text-gold">${fmt(totalRem)} kg</div><div class="origin-kpi-chip-lbl">Remaining</div></div>
+          <div class="origin-kpi-chip"><div class="origin-kpi-chip-val">${fmt(totalRec)} kg</div><div class="origin-kpi-chip-lbl">Total Received</div></div>
+          <div class="origin-kpi-chip"><div class="origin-kpi-chip-val">${beans.length}</div><div class="origin-kpi-chip-lbl">Batches</div></div>
+        </div>
+      </div>
+      <div class="origin-section-body">
+        <p class="text-muted small" style="margin-bottom:12px">Suppliers: ${suppliers.map(s=>`<span class="badge blue">${escapeHtml(s)}</span>`).join(' ')}</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Date</th><th>Bean Name</th><th>Supplier</th><th>Store</th><th>Received</th><th>Remaining</th><th>Batch</th><th>Actions</th></tr></thead>
+            <tbody>${beans.map(g=>`
+              <tr>
+                <td>${formatDate(g.date)}</td>
+                <td>${g.beanName?`<strong>${escapeHtml(g.beanName)}</strong>`:'<span class="text-muted">—</span>'}</td>
+                <td>${escapeHtml(g.supplier)}</td>
+                <td><span class="badge blue">${escapeHtml(g.storeName||'—')}</span></td>
+                <td>${fmt(g.kg)} kg</td>
+                <td><span class="badge ${g.remaining<=0?'red':g.remaining<g.kg*0.2?'gold':'green'}">${fmt(g.remaining)} kg</span></td>
+                <td class="text-muted small">${escapeHtml(g.batch||'—')}</td>
+                <td><div style="display:flex;gap:6px">
+                  <button class="btn btn-xs btn-secondary" onclick="editGreenBean('${g.id}')">Edit</button>
+                  <button class="btn btn-xs btn-danger" onclick="deleteGreenBean('${g.id}')">Remove</button>
+                </div></td>
+              </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* ===== CALCULATOR ===== */
+function updateCalc(){
+  const i=parseFloat(document.getElementById('calc-in').value)||0;
+  const w=parseFloat(document.getElementById('calc-waste').value)||0;
+  const wkg=i*(w/100);
+  document.getElementById('calc-in-display').textContent=fmt(i)+' kg';
+  document.getElementById('calc-out-display').textContent=fmt(i-wkg)+' kg';
+  document.getElementById('calc-waste-display').textContent=fmt(wkg)+' kg';
+}
+function useCalcInForm(){
+  const i=parseFloat(document.getElementById('calc-in').value)||0;
+  const w=parseFloat(document.getElementById('calc-waste').value)||0;
+  document.getElementById('r-in').value=fmt(i);
+  document.getElementById('r-out').value=fmt(i-i*(w/100));
+  autoCalcWaste();toast('Values copied to form');
+}
+function autoCalcWaste(){
+  const i=parseFloat(document.getElementById('r-in').value)||0;
+  const o=parseFloat(document.getElementById('r-out').value)||0;
+  const w=i-o,p=i>0?(w/i)*100:0;
+  document.getElementById('r-waste-display').value=(i>0&&o>0)?`${fmt(w)} kg (${p.toFixed(1)}%)`:'';
+}
+
+/* ===== ROASTING ===== */
+function addRoasting(){
+  const date=document.getElementById('r-date').value||todayISO();
+  const sourceId=document.getElementById('r-source').value;
+  const level=document.getElementById('r-level').value;
+  const inKg=parseFloat(document.getElementById('r-in').value);
+  const outKg=parseFloat(document.getElementById('r-out').value);
+  const notes=document.getElementById('r-notes').value.trim();
+  if(!sourceId){toast('Select a green bean batch','error');return;}
+  if(!inKg||inKg<=0){toast('Enter green beans in (kg)','error');return;}
+  if(isNaN(outKg)||outKg<0){toast('Enter roasted output (kg)','error');return;}
+  if(outKg>inKg){toast('Output cannot exceed input','error');return;}
+  const source=data.greenBeans.find(g=>g.id===sourceId);
+  if(!source){toast('Source batch not found','error');return;}
+  if(source.remaining<inKg){toast(`Only ${fmt(source.remaining)} kg available in this batch`,'error');return;}
+  const wasteKg=inKg-outKg,wastePct=(wasteKg/inKg)*100;
+  data.roasting.unshift({
+    id:uid(),date,sourceId,
+    sourceName:`${source.origin}${source.beanName?' – '+source.beanName:''} (${source.supplier})`,
+    sourceOrigin:source.origin,sourceBeanName:source.beanName||'',storeId:source.storeId,storeName:source.storeName||'—',
+    level,inKg,outKg,wasteKg,wastePct,notes,available:outKg
+  });
+  source.remaining-=inKg;
+  saveData();clearRForm();renderAll();
+  toast(`Roasting batch saved — ${fmt(outKg)} kg roasted, ${fmt(wasteKg)} kg waste`);
+}
+function clearRForm(){
+  document.getElementById('r-date').value=todayISO();
+  ['r-in','r-out','r-waste-display','r-notes'].forEach(i=>document.getElementById(i).value='');
+  document.getElementById('r-source').value='';
+}
+function deleteRoasting(id){
+  const r=data.roasting.find(x=>x.id===id);
+  const detail=r?`Remove roasting batch: ${escapeHtml(r.sourceOrigin||'?')} — ${fmt(r.inKg)} kg in, ${fmt(r.outKg)} kg out. Green beans will be restored.`:'Delete this roasting record?';
+  requirePassword('Delete Roasting Record', detail, ()=>{
+    const rec=data.roasting.find(x=>x.id===id);
+    if(rec){const src=data.greenBeans.find(g=>g.id===rec.sourceId);if(src)src.remaining+=rec.inKg;}
+    data.roasting=data.roasting.filter(x=>x.id!==id);
+    saveData();renderAll();toast('Roasting record deleted, green beans restored');
+  });
+}
+function editRoasting(id){
+  requirePassword('Edit Roasting Record', 'Password required to modify roasting records.', ()=>{
+    _doEditRoasting(id);
+  });
+}
+function _doEditRoasting(id){
+  const r=data.roasting.find(x=>x.id===id);if(!r)return;
+  document.getElementById('editModalTitle').textContent='Edit Roasting Record';
+  document.getElementById('editModalBody').innerHTML=`
+    <div class="form-row"><div><label>Date</label><input type="date" id="em-r-date" value="${r.date}"/></div>
+    <div><label>Roast Level</label><select id="em-r-level">
+      ${data.roastLevels.map(l=>`<option${l===r.level?' selected':''}>${escapeHtml(l)}</option>`).join('')}
+    </select></div></div>
+    <div class="form-row"><div><label>Green In (kg)</label><input type="number" id="em-r-in" value="${r.inKg}" step="0.1"/></div>
+    <div><label>Roasted Out (kg)</label><input type="number" id="em-r-out" value="${r.outKg}" step="0.1"/></div></div>
+    <div class="form-row full"><div><label>Notes</label><textarea id="em-r-notes">${escapeHtml(r.notes||'')}</textarea></div></div>
+    <p class="text-muted small">⚠ Changing kg values here does not retroactively adjust green bean stock.</p>
+  `;
+  document.getElementById('editModalSave').onclick=()=>{
+    r.date=document.getElementById('em-r-date').value||r.date;
+    r.level=document.getElementById('em-r-level').value;
+    const ni=parseFloat(document.getElementById('em-r-in').value)||r.inKg;
+    const no_=parseFloat(document.getElementById('em-r-out').value)||r.outKg;
+    r.inKg=ni;r.outKg=no_;r.wasteKg=ni-no_;r.wastePct=ni>0?((ni-no_)/ni)*100:0;
+    r.notes=document.getElementById('em-r-notes').value.trim();
+    saveData();renderAll();closeEditModal();toast('Roasting record updated');
+  };
+  document.getElementById('editModal').classList.add('show');
+}
+
+function renderRoasting(){
+  // Roasting Output by Origin
+  const roastContainer=document.getElementById('roastOriginSections');
+  const wasteContainer=document.getElementById('wasteOriginSections');
+  const byOrigin={};
+  data.roasting.forEach(r=>{
+    if(!byOrigin[r.sourceOrigin])byOrigin[r.sourceOrigin]=[];
+    byOrigin[r.sourceOrigin].push(r);
+  });
+  if(data.roasting.length===0){
+    roastContainer.innerHTML='<div class="panel"><p class="text-muted" style="text-align:center;padding:30px">No roasting batches yet.</p></div>';
+    wasteContainer.innerHTML='<div class="panel"><p class="text-muted" style="text-align:center;padding:30px">No waste records yet.</p></div>';
+    return;
+  }
+  const sortedOrigins=Object.entries(byOrigin).sort((a,b)=>{
+    return b[1].reduce((s,r)=>s+r.outKg,0)-a[1].reduce((s,r)=>s+r.outKg,0);
+  });
+  roastContainer.innerHTML=sortedOrigins.map(([origin,records])=>{
+    const totalIn=records.reduce((s,r)=>s+r.inKg,0);
+    const totalOut=records.reduce((s,r)=>s+r.outKg,0);
+    const totalWaste=records.reduce((s,r)=>s+r.wasteKg,0);
+    const avgWaste=totalIn>0?(totalWaste/totalIn)*100:0;
+    return `<div class="origin-section">
+      <div class="origin-section-header">
+        <div class="origin-section-title">${getOriginEmoji(origin)} ${escapeHtml(origin)} — Roasting Output</div>
+        <div class="origin-kpis">
+          <div class="origin-kpi-chip"><div class="origin-kpi-chip-val text-gold">${fmt(totalIn)} kg</div><div class="origin-kpi-chip-lbl">Green In</div></div>
+          <div class="origin-kpi-chip"><div class="origin-kpi-chip-val text-green">${fmt(totalOut)} kg</div><div class="origin-kpi-chip-lbl">Roasted Out</div></div>
+          <div class="origin-kpi-chip"><div class="origin-kpi-chip-val text-red">${fmt(totalWaste)} kg</div><div class="origin-kpi-chip-lbl">Wasted</div></div>
+          <div class="origin-kpi-chip"><div class="origin-kpi-chip-val ${avgWaste>15?'text-red':avgWaste<10?'text-green':'text-gold'}">${avgWaste.toFixed(1)}%</div><div class="origin-kpi-chip-lbl">Avg Waste</div></div>
+        </div>
+      </div>
+      <div class="origin-section-body">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Date</th><th>Bean / Batch</th><th>Level</th><th>Green In</th><th>Roasted Out</th><th>Wastage</th><th>Waste%</th><th>Available</th><th>Actions</th></tr></thead>
+            <tbody>${records.map(r=>`
+              <tr>
+                <td>${formatDate(r.date)}</td>
+                <td class="small">${escapeHtml(r.sourceBeanName||r.sourceName||'').slice(0,30)}</td>
+                <td><span class="badge gold">${escapeHtml(r.level)}</span></td>
+                <td>${fmt(r.inKg)} kg</td>
+                <td class="text-green">${fmt(r.outKg)} kg</td>
+                <td class="text-red">${fmt(r.wasteKg)} kg</td>
+                <td><span class="badge ${r.wastePct>15?'red':r.wastePct<10?'green':'gold'}">${r.wastePct.toFixed(1)}%</span></td>
+                <td>${fmt(r.available)} kg</td>
+                <td><div style="display:flex;gap:6px">
+                  <button class="btn btn-xs btn-secondary" onclick="editRoasting('${r.id}')">Edit</button>
+                  <button class="btn btn-xs btn-danger" onclick="deleteRoasting('${r.id}')">Remove</button>
+                </div></td>
+              </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Wasted Summary by Origin
+  wasteContainer.innerHTML=sortedOrigins.map(([origin,records])=>{
+    const totalIn=records.reduce((s,r)=>s+r.inKg,0);
+    const totalWaste=records.reduce((s,r)=>s+r.wasteKg,0);
+    const avgWaste=totalIn>0?(totalWaste/totalIn)*100:0;
+    const worstBatch=[...records].sort((a,b)=>b.wastePct-a.wastePct)[0];
+    const bestBatch=[...records].sort((a,b)=>a.wastePct-b.wastePct)[0];
+    return `<div class="origin-section">
+      <div class="origin-section-header">
+        <div class="origin-section-title">${getOriginEmoji(origin)} ${escapeHtml(origin)} — Waste Records</div>
+        <div class="origin-kpis">
+          <div class="origin-kpi-chip"><div class="origin-kpi-chip-val text-red">${fmt(totalWaste)} kg</div><div class="origin-kpi-chip-lbl">Total Waste</div></div>
+          <div class="origin-kpi-chip"><div class="origin-kpi-chip-val ${avgWaste>15?'text-red':avgWaste<10?'text-green':'text-gold'}">${avgWaste.toFixed(1)}%</div><div class="origin-kpi-chip-lbl">Avg Rate</div></div>
+          <div class="origin-kpi-chip"><div class="origin-kpi-chip-val">${records.length}</div><div class="origin-kpi-chip-lbl">Batches</div></div>
+        </div>
+      </div>
+      <div class="origin-section-body">
+        <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap">
+          <span class="text-muted small">Worst batch: <span class="badge red">${worstBatch.wastePct.toFixed(1)}%</span> on ${formatDate(worstBatch.date)}</span>
+          <span class="text-muted small">Best batch: <span class="badge green">${bestBatch.wastePct.toFixed(1)}%</span> on ${formatDate(bestBatch.date)}</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Date</th><th>Green In</th><th>Wastage (kg)</th><th>Waste %</th><th>Progress</th></tr></thead>
+            <tbody>${records.map(r=>`
+              <tr>
+                <td>${formatDate(r.date)}</td>
+                <td>${fmt(r.inKg)} kg</td>
+                <td class="text-red">${fmt(r.wasteKg)} kg</td>
+                <td><span class="badge ${r.wastePct>15?'red':r.wastePct<10?'green':'gold'}">${r.wastePct.toFixed(1)}%</span></td>
+                <td style="min-width:100px"><div class="progress-bar"><div class="progress-fill ${r.wastePct>15?'red':r.wastePct<10?'green':'gold'}" style="width:${Math.min(r.wastePct*3,100)}%"></div></div></td>
+              </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* ===== MOVEMENTS ===== */
+function populateMVDropdowns(){
+  // Source batch = green bean records with remaining>0
+  const src=document.getElementById('mv-source');
+  if(!src)return;
+  const curSrc=src.value;
+  src.innerHTML='<option value="">— Select green bean batch —</option>'+
+    data.greenBeans.filter(g=>g.remaining>0).map(g=>
+      `<option value="${g.id}">${escapeHtml(g.origin)}${g.beanName?' — '+escapeHtml(g.beanName):''} · [${escapeHtml(g.storeName||'?')}] (${fmt(g.remaining)} kg)</option>`
+    ).join('');
+  if(curSrc)src.value=curSrc;
+
+  // Destination depends on movement type
+  refreshMVDestination();
+}
+function refreshMVDestination(){
+  const type=document.getElementById('mv-type').value;
+  const dest=document.getElementById('mv-dest');
+  if(!dest)return;
+  const cur=dest.value;
+  if(type==='store_to_roastery'){
+    dest.innerHTML='<option value="__roastery__">🏭 Roastery (for processing)</option>';
+    dest.value='__roastery__';
+  }else if(type==='store_to_store'){
+    dest.innerHTML='<option value="">— Select destination store —</option>'+
+      data.stores.map(s=>`<option value="${s.id}">${escapeHtml(s.name)} — ${escapeHtml(s.location)}</option>`).join('');
+    if(cur&&cur!=='__roastery__')dest.value=cur;
+  }else{
+    dest.innerHTML='<option value="__adjust__">Inventory adjustment (write-off)</option>';
+    dest.value='__adjust__';
+  }
+}
+function addMovement(){
+  const date=document.getElementById('mv-date').value||todayISO();
+  const type=document.getElementById('mv-type').value;
+  const sourceId=document.getElementById('mv-source').value;
+  const kg=parseFloat(document.getElementById('mv-kg').value);
+  const destVal=document.getElementById('mv-dest').value;
+  const notes=document.getElementById('mv-notes').value.trim();
+  if(!sourceId){toast('Select a source batch','error');return;}
+  if(!kg||kg<=0){toast('Enter a valid quantity','error');return;}
+  const source=data.greenBeans.find(g=>g.id===sourceId);
+  if(!source){toast('Source batch not found','error');return;}
+  if(kg>source.remaining){toast(`Only ${fmt(source.remaining)} kg available in this batch`,'error');return;}
+
+  // Resolve destination label
+  let destLabel='';
+  if(type==='store_to_roastery'){destLabel='Roastery';}
+  else if(type==='store_to_store'){
+    if(!destVal){toast('Select a destination store','error');return;}
+    if(destVal===source.storeId){toast('Destination must differ from source','error');return;}
+    const ds=data.stores.find(s=>s.id===destVal);
+    destLabel=ds?ds.name:'—';
+  }else{destLabel='Adjustment / Write-off';}
+
+  // Deduct from source
+  source.remaining-=kg;
+
+  // For store→store we create a *new* green bean record at the destination so balances follow
+  if(type==='store_to_store'){
+    const ds=data.stores.find(s=>s.id===destVal);
+    data.greenBeans.unshift({
+      id:uid(),date,supplier:source.supplier,origin:source.origin,beanName:source.beanName,
+      kg,storeId:destVal,storeName:ds?ds.name:'—',batch:(source.batch||'')+'-TRF',
+      cost:0,notes:'Transferred from '+(source.storeName||'?'),remaining:kg
+    });
+  }
+
+  data.movements.unshift({
+    id:uid(),date,type,sourceId,
+    sourceName:`${source.origin}${source.beanName?' — '+source.beanName:''}`,
+    sourceOrigin:source.origin,sourceBeanName:source.beanName||'',
+    fromStore:source.storeName||'—',toStore:destLabel,
+    kg,notes
+  });
+  saveData();clearMVForm();renderAll();
+  toast(`${fmt(kg)} kg moved: ${source.storeName||'?'} → ${destLabel}`);
+}
+function clearMVForm(){
+  document.getElementById('mv-date').value=todayISO();
+  document.getElementById('mv-source').value='';
+  document.getElementById('mv-kg').value='';
+  document.getElementById('mv-notes').value='';
+  document.getElementById('mv-type').value='store_to_roastery';
+  refreshMVDestination();
+}
+function deleteMovement(id){
+  if(!confirm('Delete this movement? Source balance will be restored. (Any transferred stock rows will remain — delete them separately if needed.)'))return;
+  const m=data.movements.find(x=>x.id===id);
+  if(m){
+    const src=data.greenBeans.find(g=>g.id===m.sourceId);
+    if(src)src.remaining+=m.kg;
+  }
+  data.movements=data.movements.filter(x=>x.id!==id);
+  saveData();renderAll();toast('Movement deleted','warn');
+}
+function renderMovements(){
+  populateMVDropdowns();
+  // KPIs
+  const total=data.movements.length;
+  const toRoastery=data.movements.filter(m=>m.type==='store_to_roastery').reduce((s,m)=>s+m.kg,0);
+  const interStore=data.movements.filter(m=>m.type==='store_to_store').reduce((s,m)=>s+m.kg,0);
+  const eT=document.getElementById('mv-kpi-total');
+  const eR=document.getElementById('mv-kpi-roastery');
+  const eI=document.getElementById('mv-kpi-interstore');
+  if(eT)eT.textContent=total;
+  if(eR)eR.innerHTML=fmt(toRoastery)+'<span class="kpi-unit">kg</span>';
+  if(eI)eI.innerHTML=fmt(interStore)+'<span class="kpi-unit">kg</span>';
+
+  // Table
+  const tb=document.getElementById('movementsTable');
+  if(!tb)return;
+  if(data.movements.length===0){
+    tb.innerHTML='<tr class="empty-row"><td colspan="8">No movements logged yet.</td></tr>';
+    return;
+  }
+  const typeLabel={store_to_roastery:'<span class="badge gold">→ Roastery</span>',store_to_store:'<span class="badge blue">Store ↔ Store</span>',adjustment:'<span class="badge red">Adjustment</span>'};
+  tb.innerHTML=data.movements.map(m=>`
+    <tr>
+      <td>${formatDate(m.date)}</td>
+      <td>${typeLabel[m.type]||m.type}</td>
+      <td><strong>${escapeHtml(m.sourceOrigin||'—')}</strong>${m.sourceBeanName?'<br><span class="text-muted small">'+escapeHtml(m.sourceBeanName)+'</span>':''}</td>
+      <td>${escapeHtml(m.fromStore||'—')}</td>
+      <td>${escapeHtml(m.toStore||'—')}</td>
+      <td><strong>${fmt(m.kg)} kg</strong></td>
+      <td class="text-muted small">${escapeHtml(m.notes||'—')}</td>
+      <td><button class="btn btn-xs btn-danger" onclick="deleteMovement('${m.id}')">Remove</button></td>
+    </tr>
+  `).join('');
+}
+
+/* ===== STORES MANAGEMENT ===== */
+function addNewStore(){
+  const id='s'+uid();
+  data.stores.push({id,name:'New Store',location:'Location'});
+  saveData();renderAll();toast('New store added — edit the name, then click Save');
+}
+function deleteStore(id){
+  if(data.stores.length<=1){toast('Must keep at least one store','error');return;}
+  const s=data.stores.find(x=>x.id===id);
+  const hasGB=data.greenBeans.some(g=>g.storeId===id);
+  const detail=`Remove store "${s?s.name:'this store'}"${hasGB?' — linked green bean records will remain but show no store.':'.'}`;
+  requirePassword('Delete Store', detail, ()=>{
+    data.stores=data.stores.filter(x=>x.id!==id);
+    saveData();renderAll();toast('Store removed','warn');
+  });
+}
+function saveStore(id){
+  const nameEl=document.getElementById('store-name-'+id);
+  const locEl=document.getElementById('store-loc-'+id);
+  const safEl=document.getElementById('store-saf-'+id);
+  if(!nameEl||!locEl)return;
+  const name=nameEl.value.trim();
+  const location=locEl.value.trim();
+  const safetyStock=Math.max(0,parseFloat(safEl?safEl.value:0)||0);
+  if(!name){toast('Store name cannot be empty','error');return;}
+  requirePassword('Save Store Settings', `Save changes to store "${name}"?`, ()=>{
+    const s=data.stores.find(x=>x.id===id);
+    if(!s)return;
+    s.name=name;s.location=location||'—';s.safetyStock=safetyStock;
+    data.greenBeans.forEach(g=>{if(g.storeId===id)g.storeName=name;});
+    saveData();renderAll();toast(`Store "${name}" saved`);
+  });
+}
+function saveThreshold(){
+  const v=parseFloat(document.getElementById('lowThreshold').value);
+  if(isNaN(v)||v<0){toast('Enter a valid number','error');return;}
+  data.lowThreshold=v;saveData();renderAll();toast('Threshold saved');
+}
+function renderStoresEdit(){
+  const grid=document.getElementById('storesEditGrid');
+  document.getElementById('storeCount').textContent=data.stores.length;
+  if(data.stores.length===0){grid.innerHTML='<p class="text-muted">No stores yet.</p>';return;}
+  grid.innerHTML=data.stores.map((s,i)=>{
+    const bal=getStoreBalance(s.id);
+    const saf=s.safetyStock||0;
+    const originMap={};
+    data.greenBeans.filter(g=>g.storeId===s.id&&g.remaining>0).forEach(g=>{
+      if(!originMap[g.origin])originMap[g.origin]=0;
+      originMap[g.origin]+=g.remaining;
+    });
+    const origins=Object.entries(originMap).sort((a,b)=>b[1]-a[1]);
+    const belowSafety=saf>0&&bal<saf;
+    const statusBadge=bal<=0?'<span class="badge red">Out of Stock</span>':belowSafety?'<span class="badge red">Below Safety</span>':bal<data.lowThreshold?'<span class="badge gold">Low Stock</span>':'<span class="badge green">In Stock</span>';
+    return `<div class="store-manage-card">
+      <div class="store-manage-header">
+        <strong>Store #${i+1} &nbsp;<span class="badge ${belowSafety||bal<=0?'red':bal<data.lowThreshold?'gold':'green'}">${fmt(bal)} kg</span> ${statusBadge}</strong>
+        <button class="btn btn-xs btn-danger" onclick="deleteStore('${s.id}')">🗑 Delete</button>
+      </div>
+      <div class="form-row three">
+        <div><label>Store Name</label><input type="text" id="store-name-${s.id}" value="${escapeHtml(s.name)}" placeholder="Store name"/></div>
+        <div><label>Location / Branch</label><input type="text" id="store-loc-${s.id}" value="${escapeHtml(s.location)}" placeholder="Branch location"/></div>
+        <div><label>Safety Stock (kg)</label><input type="number" id="store-saf-${s.id}" value="${saf}" min="0" step="0.5" placeholder="0"/></div>
+      </div>
+      <div class="btn-row" style="margin-top:10px">
+        <button class="btn btn-sm" onclick="saveStore('${s.id}')">💾 Save</button>
+        <button class="btn btn-sm btn-secondary" onclick="renderAll()">Cancel</button>
+      </div>
+      ${origins.length>0?`<div style="margin-top:10px;font-size:12px;color:var(--muted)">In stock: ${origins.map(([o,v])=>`<span class="badge gold" style="margin:2px">${escapeHtml(o)} ${fmt(v)} kg</span>`).join('')}</div>`:''}
+    </div>`;
+  }).join('');
+  document.getElementById('lowThreshold').value=data.lowThreshold;
+}
+
+/* ===== DASHBOARD RENDER ===== */
+function renderDashboardStores(){
+  const grid=document.getElementById('dashboardStores');
+  const storesWithBal=getAllStoreBalances();
+  if(storesWithBal.length===0){grid.innerHTML='<p class="text-muted">No stores configured.</p>';return;}
+  grid.innerHTML=storesWithBal.map(s=>{
+    const originMap={};
+    data.greenBeans.filter(g=>g.storeId===s.id&&g.remaining>0).forEach(g=>{
+      if(!originMap[g.origin])originMap[g.origin]=0;
+      originMap[g.origin]+=g.remaining;
+    });
+    const origins=Object.entries(originMap).sort((a,b)=>b[1]-a[1]);
+    const bal=s.balance;
+    const saf=s.safetyStock||0;
+    const isEmpty=bal<=0;
+    const isCritical=saf>0&&bal<saf;
+    const isLow=bal<data.lowThreshold;
+    const badgeClass=isEmpty?'red':isCritical?'red':isLow?'gold':'green';
+    const badgeText=isEmpty?'Out of Stock':isCritical?'Below Safety':isLow?'Low Stock':'In Stock';
+    const totalBatches=data.greenBeans.filter(g=>g.storeId===s.id&&g.remaining>0).length;
+    return `<div class="store-card">
+      <div class="store-card-header">
+        <div>
+          <div class="store-name">🏪 ${escapeHtml(s.name)}</div>
+          <div class="store-loc">📍 ${escapeHtml(s.location)}</div>
+        </div>
+        <span class="badge ${badgeClass}">${badgeText}</span>
+      </div>
+      <div class="store-stats">
+        <div class="store-stat balance">
+          <div class="store-stat-val">${fmt(bal)}<span style="font-size:12px;color:var(--muted)"> kg</span></div>
+          <div class="store-stat-lbl">GB Balance</div>
+        </div>
+        <div class="store-stat status-val">
+          <div class="store-stat-val">${totalBatches}</div>
+          <div class="store-stat-lbl">Batches</div>
+        </div>
+      </div>
+      ${origins.length>0
+        ?`<div class="store-origins-list">${origins.map(([o,v])=>`<div class="store-origin-row"><span>${getOriginEmoji(o)} ${escapeHtml(o)}</span><span>${fmt(v)} kg</span></div>`).join('')}</div>`
+        :'<div style="margin-top:10px;font-size:12px;color:var(--muted);border-top:1px solid var(--line);padding-top:10px;text-align:center">No stock assigned</div>'}
+    </div>`;
+  }).join('');
+}
+
+function renderOriginCards(){
+  const grid=document.getElementById('originCards');
+  const map={};
+  data.greenBeans.forEach(g=>{
+    if(!map[g.origin])map[g.origin]={origin:g.origin,supplier:g.supplier,beanNames:new Set(),totalReceived:0,remaining:0,stores:new Set()};
+    map[g.origin].totalReceived+=g.kg;
+    map[g.origin].remaining+=g.remaining;
+    if(g.storeName)map[g.origin].stores.add(g.storeName);
+    if(g.beanName)map[g.origin].beanNames.add(g.beanName);
+  });
+  const wasteMap={};
+  data.roasting.forEach(r=>{
+    if(!wasteMap[r.sourceOrigin])wasteMap[r.sourceOrigin]={roasted:0,waste:0};
+    wasteMap[r.sourceOrigin].roasted+=r.outKg;
+    wasteMap[r.sourceOrigin].waste+=r.wasteKg;
+  });
+  const entries=Object.values(map).sort((a,b)=>b.remaining-a.remaining);
+  if(entries.length===0){
+    grid.innerHTML='<div class="panel" style="grid-column:1/-1"><p class="text-muted" style="text-align:center;padding:30px">No green bean deliveries recorded yet.</p></div>';
+    return;
+  }
+  grid.innerHTML=entries.map(e=>{
+    const w=wasteMap[e.origin]||{roasted:0,waste:0};
+    const storeList=[...e.stores];
+    const beanNameList=[...e.beanNames];
+    return `<div class="origin-card">
+      <div class="origin-header">
+        <div>
+          <div class="origin-name">${getOriginEmoji(e.origin)} ${escapeHtml(e.origin)}</div>
+          <div class="origin-supplier">${escapeHtml(e.supplier)}</div>
+          ${beanNameList.length>0?`<div class="origin-bean-name">${beanNameList.slice(0,2).map(b=>escapeHtml(b)).join(', ')}</div>`:''}
+        </div>
+        <span class="badge ${e.remaining<=0?'red':e.remaining<e.totalReceived*0.2?'gold':'green'}">${e.remaining<=0?'Depleted':'In Stock'}</span>
+      </div>
+      <div class="origin-stats">
+        <div class="origin-stat gb"><div class="origin-stat-val">${fmt(e.remaining)}<span style="font-size:12px;color:var(--muted)"> kg</span></div><div class="origin-stat-lbl">GB Balance</div></div>
+        <div class="origin-stat roast"><div class="origin-stat-val">${fmt(w.roasted)}<span style="font-size:12px;color:var(--muted)"> kg</span></div><div class="origin-stat-lbl">Roasted</div></div>
+        <div class="origin-stat waste"><div class="origin-stat-val">${fmt(w.waste)}<span style="font-size:12px;color:var(--muted)"> kg</span></div><div class="origin-stat-lbl">Wasted</div></div>
+      </div>
+      ${storeList.length>0?`<div class="origin-stores">${storeList.map(s=>`<span class="badge blue">${escapeHtml(s)}</span>`).join('')}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+function renderDashRoastOrigins(){
+  const cont=document.getElementById('dashRoastOrigins');
+  if(data.roasting.length===0){cont.innerHTML='<div class="panel" style="grid-column:1/-1"><p class="text-muted" style="text-align:center;padding:20px">No roasting records yet.</p></div>';return;}
+  const byOrigin={};
+  data.roasting.forEach(r=>{
+    if(!byOrigin[r.sourceOrigin])byOrigin[r.sourceOrigin]={batches:0,totalIn:0,totalOut:0,totalWaste:0};
+    byOrigin[r.sourceOrigin].batches++;
+    byOrigin[r.sourceOrigin].totalIn+=r.inKg;
+    byOrigin[r.sourceOrigin].totalOut+=r.outKg;
+    byOrigin[r.sourceOrigin].totalWaste+=r.wasteKg;
+  });
+  cont.innerHTML=Object.entries(byOrigin).sort((a,b)=>b[1].totalOut-a[1].totalOut).map(([origin,d])=>{
+    const avgWaste=d.totalIn>0?(d.totalWaste/d.totalIn)*100:0;
+    return `<div class="roast-origin-card">
+      <div class="roast-origin-card-header">
+        <div class="roast-origin-name">${getOriginEmoji(origin)} ${escapeHtml(origin)}</div>
+        <span class="badge ${avgWaste>15?'red':avgWaste<10?'green':'gold'}">${avgWaste.toFixed(1)}% waste</span>
+      </div>
+      <div class="roast-stats-row">
+        <div class="roast-stat-mini"><div class="roast-stat-mini-val text-gold">${d.batches}</div><div class="roast-stat-mini-lbl">Batches</div></div>
+        <div class="roast-stat-mini"><div class="roast-stat-mini-val">${fmt(d.totalIn)}</div><div class="roast-stat-mini-lbl">Green In kg</div></div>
+        <div class="roast-stat-mini"><div class="roast-stat-mini-val text-green">${fmt(d.totalOut)}</div><div class="roast-stat-mini-lbl">Out kg</div></div>
+        <div class="roast-stat-mini"><div class="roast-stat-mini-val text-red">${fmt(d.totalWaste)}</div><div class="roast-stat-mini-lbl">Waste kg</div></div>
+      </div>
+      <div class="progress-bar" style="margin-top:10px"><div class="progress-fill ${avgWaste>15?'red':avgWaste<10?'green':'gold'}" style="width:${Math.min(d.totalOut/Math.max(d.totalIn,1)*100,100)}%"></div></div>
+      <div class="text-muted small" style="margin-top:4px">Yield: ${d.totalIn>0?((d.totalOut/d.totalIn)*100).toFixed(1):0}%</div>
+    </div>`;
+  }).join('');
+}
+
+function renderKPIs(){
+  const greenTotal=data.greenBeans.reduce((s,g)=>s+g.remaining,0);
+  const roastedReady=data.roasting.reduce((s,r)=>s+r.available,0);
+  const totalReceived=data.greenBeans.reduce((s,g)=>s+g.kg,0);
+  const totalRoastedOut=data.roasting.reduce((s,r)=>s+r.outKg,0);
+  const inTotal=data.roasting.reduce((s,r)=>s+r.inKg,0);
+  const wasteTotal=data.roasting.reduce((s,r)=>s+r.wasteKg,0);
+  const yieldPct=inTotal>0?((inTotal-wasteTotal)/inTotal)*100:0;
+  const wastePct=inTotal>0?(wasteTotal/inTotal)*100:0;
+  const origins=new Set(data.greenBeans.filter(g=>g.remaining>0).map(g=>g.origin)).size;
+
+  // Core 5 KPIs
+  set('kpi-green',fmt(greenTotal));
+  set('kpi-wasted',fmt(wasteTotal));
+  set('kpi-roasted',fmt(roastedReady));
+  set('kpi-received',fmt(totalReceived));
+  set('kpi-yield',yieldPct.toFixed(0),'%');
+  document.getElementById('kpi-green-sub').textContent=origins>0?`across ${data.stores.length} store${data.stores.length!==1?'s':''}`:'no stock';
+  document.getElementById('kpi-wasted-sub').textContent=`${wastePct.toFixed(1)}% avg loss rate`;
+  document.getElementById('kpi-received-sub').textContent=`${data.greenBeans.length} deliver${data.greenBeans.length===1?'y':'ies'}`;
+  document.getElementById('kpi-yield-sub').textContent=`${data.roasting.length} session${data.roasting.length===1?'':'s'}`;
+
+  // Bean flow
+  document.getElementById('flow-received').textContent=fmt0(totalReceived);
+  document.getElementById('flow-stores').textContent=fmt0(greenTotal);
+  document.getElementById('flow-wasted').textContent=fmt0(wasteTotal);
+  document.getElementById('flow-output').textContent=fmt0(totalRoastedOut);
+
+  // Stock bars by origin
+  renderStockByOrigin();
+  renderLowStockAlerts();
+
+  // Recent tables
+  const recRoast=document.getElementById('recentRoasting');
+  recRoast.innerHTML=data.roasting.length===0
+    ?'<tr class="empty-row"><td colspan="5">No roasting yet</td></tr>'
+    :data.roasting.slice(0,6).map(r=>`<tr>
+      <td>${formatDate(r.date)}</td>
+      <td class="small"><strong>${escapeHtml((r.sourceOrigin||'').slice(0,22))}</strong></td>
+      <td>${fmt(r.inKg)} kg</td>
+      <td class="text-green">${fmt(r.outKg)} kg</td>
+      <td><span class="badge ${r.wastePct>15?'red':r.wastePct<10?'green':'gold'}">${r.wastePct.toFixed(1)}%</span></td>
+    </tr>`).join('');
+
+  const recGreen=document.getElementById('recentGreen');
+  recGreen.innerHTML=data.greenBeans.length===0
+    ?'<tr class="empty-row"><td colspan="4">No deliveries yet</td></tr>'
+    :data.greenBeans.slice(0,6).map(g=>`<tr>
+      <td>${formatDate(g.date)}</td>
+      <td class="small"><strong>${escapeHtml(g.origin)}</strong>${g.beanName?'<br><span class="text-muted">'+escapeHtml(g.beanName)+'</span>':''}</td>
+      <td><span class="badge blue">${escapeHtml(g.storeName||'—')}</span></td>
+      <td>${fmt(g.kg)} kg</td>
+    </tr>`).join('');
+  renderWeekChart();
+}
+
+function set(id,val,unit){
+  const el=document.getElementById(id);
+  if(!el)return;
+  el.innerHTML=val+(unit?`<span class="kpi-unit">${unit}</span>`:'<span class="kpi-unit">kg</span>');
+}
+function fmt0(n){return Math.round(Number(n)).toString();}
+
+function renderLowStockAlerts(){
+  const cont=document.getElementById('lowStockAlerts');
+  if(!cont)return;
+  const alerts=[];
+  data.stores.forEach(s=>{
+    const bal=getStoreBalance(s.id);
+    const saf=s.safetyStock||0;
+    if(bal<=0){
+      alerts.push({type:'critical',text:`${s.name} is OUT OF STOCK`});
+    }else if(saf>0&&bal<saf){
+      alerts.push({type:'critical',text:`${s.name} is BELOW SAFETY (${fmt(bal)} kg of ${fmt(saf)} kg minimum)`});
+    }else if(bal<data.lowThreshold){
+      alerts.push({type:'warn',text:`${s.name} is low on stock (${fmt(bal)} kg)`});
+    }
+  });
+  if(alerts.length===0){cont.innerHTML='';return;}
+  cont.innerHTML=`<div class="stock-alerts">
+    ${alerts.map(a=>`<div class="stock-alert ${a.type}"><span class="alert-icon">${a.type==='critical'?'🚨':'⚠️'}</span>${escapeHtml(a.text)}</div>`).join('')}
+  </div>`;
+}
+
+function renderStockByOrigin(){
+  // Green Bean Stock by Origin
+  const g=document.getElementById('greenStockByOrigin');
+  const greenByOrigin={};
+  data.greenBeans.forEach(gb=>{
+    if(gb.remaining>0){
+      greenByOrigin[gb.origin]=(greenByOrigin[gb.origin]||0)+gb.remaining;
+    }
+  });
+  const greenEntries=Object.entries(greenByOrigin).sort((a,b)=>b[1]-a[1]);
+  const greenMax=Math.max(...greenEntries.map(e=>e[1]),1);
+  if(greenEntries.length===0){
+    g.innerHTML='<div class="stock-empty">No green beans in stock</div>';
+  }else{
+    g.innerHTML=greenEntries.map(([origin,kg])=>`
+      <div class="stock-bar-row">
+        <div class="stock-bar-name">${escapeHtml(origin)}</div>
+        <div class="stock-bar-track"><div class="stock-bar-fill green" style="width:${(kg/greenMax)*100}%"></div></div>
+        <div class="stock-bar-val">${fmt(kg)} kg</div>
+      </div>
+    `).join('');
+  }
+
+  // Roasted Bean Stock by Origin
+  const r=document.getElementById('roastedStockByOrigin');
+  const roastedByOrigin={};
+  data.roasting.forEach(rec=>{
+    if(rec.available>0){
+      roastedByOrigin[rec.sourceOrigin]=(roastedByOrigin[rec.sourceOrigin]||0)+rec.available;
+    }
+  });
+  const roastedEntries=Object.entries(roastedByOrigin).sort((a,b)=>b[1]-a[1]);
+  const roastedMax=Math.max(...roastedEntries.map(e=>e[1]),1);
+  if(roastedEntries.length===0){
+    r.innerHTML='<div class="stock-empty">No roasted stock yet</div>';
+  }else{
+    r.innerHTML=roastedEntries.map(([origin,kg])=>`
+      <div class="stock-bar-row">
+        <div class="stock-bar-name">${escapeHtml(origin)}</div>
+        <div class="stock-bar-track"><div class="stock-bar-fill tan" style="width:${(kg/roastedMax)*100}%"></div></div>
+        <div class="stock-bar-val">${fmt(kg)} kg</div>
+      </div>
+    `).join('');
+  }
+}
+
+function renderWeekChart(){
+  const chart=document.getElementById('weekChart');
+  const legend=document.getElementById('weekChartLegend');
+  const days=[];
+  const now=new Date();
+
+  // Build day buckets: each day has a breakdown per origin
+  const allOrigins=new Set();
+  for(let i=6;i>=0;i--){
+    const d=new Date(now);d.setDate(d.getDate()-i);
+    const iso=d.toISOString().slice(0,10);
+    const byOrigin={};
+    data.roasting.filter(r=>r.date===iso).forEach(r=>{
+      const o=r.sourceOrigin||'Unknown';
+      allOrigins.add(o);
+      byOrigin[o]=(byOrigin[o]||0)+r.outKg;
+    });
+    const total=Object.values(byOrigin).reduce((s,v)=>s+v,0);
+    days.push({label:d.toLocaleDateString('en-GB',{weekday:'short'}),date:iso,total,byOrigin});
+  }
+
+  const originList=[...allOrigins];
+  // Deterministic colors per origin
+  const palette=['#e8a922','#2ecc71','#3498db','#9b59b6','#1abc9c','#e74c3c','#f5c44a','#27ae60','#5dade2','#af7ac5'];
+  const colorFor=(o)=>{
+    const idx=originList.indexOf(o);
+    return palette[idx%palette.length];
+  };
+
+  const max=Math.max(...days.map(d=>d.total),1);
+
+  // Render stacked bars
+  chart.innerHTML=days.map(d=>{
+    const hPct=Math.max((d.total/max)*100,d.total>0?4:0);
+    let segments='';
+    if(d.total>0){
+      // Stack segments from bottom, ordered by origin list for consistency
+      originList.forEach(o=>{
+        const v=d.byOrigin[o]||0;
+        if(v>0){
+          const segPct=(v/d.total)*100;
+          segments+=`<div class="chart-seg" style="height:${segPct}%;background:linear-gradient(180deg,${colorFor(o)} 0%,${colorFor(o)}cc 100%)" title="${escapeHtml(o)}: ${fmt(v)} kg"></div>`;
+        }
+      });
+    }
+    return `<div class="chart-bar-group">
+      <div class="chart-bar-stack" style="height:${hPct}%">
+        ${d.total>0?`<div class="chart-bar-value">${fmt(d.total)}</div>`:''}
+        ${segments}
+      </div>
+      <div class="chart-bar-label">${d.label}</div>
+    </div>`;
+  }).join('');
+
+  // Render legend
+  if(originList.length===0){
+    legend.innerHTML='<span class="text-muted small" style="opacity:.6">No roasting in the last 7 days</span>';
+  }else{
+    legend.innerHTML=originList.map(o=>
+      `<span class="legend-chip"><span class="legend-dot" style="background:${colorFor(o)}"></span>${getOriginEmoji(o)} ${escapeHtml(o)}</span>`
+    ).join('');
+  }
+}
+
+/* ===== REPORTS ===== */
+function renderReports(){
+  const fe=document.getElementById('rep-from'),te=document.getElementById('rep-to');
+  if(!fe.value){const d=new Date();d.setDate(d.getDate()-30);fe.value=d.toISOString().slice(0,10);}
+  if(!te.value)te.value=todayISO();
+  const from=fe.value,to=te.value;
+  const filtered=data.roasting.filter(r=>r.date>=from&&r.date<=to);
+
+  // Daily
+  const byDate={};
+  filtered.forEach(r=>{
+    if(!byDate[r.date])byDate[r.date]={batches:0,inKg:0,outKg:0,wasteKg:0};
+    byDate[r.date].batches++;byDate[r.date].inKg+=r.inKg;byDate[r.date].outKg+=r.outKg;byDate[r.date].wasteKg+=r.wasteKg;
+  });
+  const sorted=Object.keys(byDate).sort().reverse();
+  const tbody=document.getElementById('dailyReport');
+  tbody.innerHTML=sorted.length===0
+    ?'<tr class="empty-row"><td colspan="6">No roasting in this period.</td></tr>'
+    :sorted.map(date=>{
+      const d=byDate[date];const avg=d.inKg>0?(d.wasteKg/d.inKg)*100:0;
+      return `<tr><td><strong>${formatDate(date)}</strong></td><td>${d.batches}</td>
+        <td>${fmt(d.inKg)} kg</td><td class="text-green">${fmt(d.outKg)} kg</td>
+        <td class="text-red">${fmt(d.wasteKg)} kg</td>
+        <td><span class="badge ${avg>15?'red':avg<10?'green':'gold'}">${avg.toFixed(1)}%</span></td></tr>`;
+    }).join('');
+
+  // Summary
+  const tI=filtered.reduce((s,r)=>s+r.inKg,0);
+  const tO=filtered.reduce((s,r)=>s+r.outKg,0);
+  const tW=filtered.reduce((s,r)=>s+r.wasteKg,0);
+  const aR=tI>0?(tW/tI)*100:0;
+  document.getElementById('rep-green').textContent=fmt(tI)+' kg';
+  document.getElementById('rep-roasted').textContent=fmt(tO)+' kg';
+  document.getElementById('rep-waste').textContent=fmt(tW)+' kg';
+  document.getElementById('rep-rate').textContent=aR.toFixed(1)+'%';
+  if(filtered.length>0){
+    const s=[...filtered].sort((a,b)=>b.wastePct-a.wastePct);
+    document.getElementById('rep-highest').innerHTML=`<span class="badge red">${s[0].wastePct.toFixed(1)}%</span> ${formatDate(s[0].date)}`;
+    document.getElementById('rep-lowest').innerHTML=`<span class="badge green">${s[s.length-1].wastePct.toFixed(1)}%</span> ${formatDate(s[s.length-1].date)}`;
+  }else{document.getElementById('rep-highest').textContent='—';document.getElementById('rep-lowest').textContent='—';}
+
+  // Store balances
+  document.getElementById('rep-stores').innerHTML=getAllStoreBalances().map(s=>{
+    const received=data.greenBeans.filter(g=>g.storeId===s.id&&g.date>=from&&g.date<=to).reduce((x,g)=>x+g.kg,0);
+    return `<tr><td><strong>${escapeHtml(s.name)}</strong><br><span class="text-muted small">${escapeHtml(s.location)}</span></td>
+      <td>${fmt(received)} kg</td><td class="text-gold"><strong>${fmt(s.balance)} kg</strong></td></tr>`;
+  }).join('');
+
+  // Weekly
+  const byWeek={};
+  filtered.forEach(r=>{
+    const wk=getWeekNumber(r.date);
+    if(!byWeek[wk])byWeek[wk]={batches:0,inKg:0,outKg:0,wasteKg:0};
+    byWeek[wk].batches++;byWeek[wk].inKg+=r.inKg;byWeek[wk].outKg+=r.outKg;byWeek[wk].wasteKg+=r.wasteKg;
+  });
+  document.getElementById('weeklyReport').innerHTML=Object.entries(byWeek).length===0
+    ?'<tr class="empty-row"><td colspan="6">No data</td></tr>'
+    :Object.entries(byWeek).reverse().map(([wk,d])=>{
+      const avg=d.inKg>0?(d.wasteKg/d.inKg)*100:0;
+      return `<tr><td><strong>${escapeHtml(wk)}</strong></td><td>${d.batches}</td><td>${fmt(d.inKg)} kg</td>
+        <td class="text-green">${fmt(d.outKg)} kg</td><td class="text-red">${fmt(d.wasteKg)} kg</td>
+        <td><span class="badge ${avg>15?'red':avg<10?'green':'gold'}">${avg.toFixed(1)}%</span></td></tr>`;
+    }).join('');
+
+  // Monthly
+  const byMonth={};
+  filtered.forEach(r=>{
+    const mo=getMonthKey(r.date);
+    if(!byMonth[mo])byMonth[mo]={batches:0,inKg:0,outKg:0,wasteKg:0};
+    byMonth[mo].batches++;byMonth[mo].inKg+=r.inKg;byMonth[mo].outKg+=r.outKg;byMonth[mo].wasteKg+=r.wasteKg;
+  });
+  document.getElementById('monthlyReport').innerHTML=Object.entries(byMonth).length===0
+    ?'<tr class="empty-row"><td colspan="6">No data</td></tr>'
+    :Object.entries(byMonth).reverse().map(([mo,d])=>{
+      const avg=d.inKg>0?(d.wasteKg/d.inKg)*100:0;
+      return `<tr><td><strong>${escapeHtml(mo)}</strong></td><td>${d.batches}</td><td>${fmt(d.inKg)} kg</td>
+        <td class="text-green">${fmt(d.outKg)} kg</td><td class="text-red">${fmt(d.wasteKg)} kg</td>
+        <td><span class="badge ${avg>15?'red':avg<10?'green':'gold'}">${avg.toFixed(1)}%</span></td></tr>`;
+    }).join('');
+
+  // Stock Records
+  const filteredGB=data.greenBeans.filter(g=>g.date>=from&&g.date<=to);
+  document.getElementById('stockReport').innerHTML=filteredGB.length===0
+    ?'<tr class="empty-row"><td colspan="8">No stock records in this period.</td></tr>'
+    :filteredGB.map(g=>`<tr>
+      <td>${formatDate(g.date)}</td>
+      <td>${getOriginEmoji(g.origin)}<strong>${escapeHtml(g.origin)}</strong></td>
+      <td>${g.beanName?escapeHtml(g.beanName):'—'}</td>
+      <td>${escapeHtml(g.supplier)}</td>
+      <td><span class="badge blue">${escapeHtml(g.storeName||'—')}</span></td>
+      <td>${fmt(g.kg)} kg</td>
+      <td><span class="badge ${g.remaining<=0?'red':g.remaining<g.kg*0.2?'gold':'green'}">${fmt(g.remaining)} kg</span></td>
+      <td class="text-muted small">${escapeHtml(g.batch||'—')}</td>
+    </tr>`).join('');
+
+  // Roasting by Origin in reports
+  renderRepRoastByOrigin(filtered,from,to);
+  renderRepWasteByOrigin(filtered,from,to);
+}
+
+function renderRepRoastByOrigin(filtered,from,to){
+  const cont=document.getElementById('repRoastOriginSections');
+  const byOrigin={};
+  filtered.forEach(r=>{
+    if(!byOrigin[r.sourceOrigin])byOrigin[r.sourceOrigin]=[];
+    byOrigin[r.sourceOrigin].push(r);
+  });
+  if(Object.keys(byOrigin).length===0){cont.innerHTML='<div class="panel"><p class="text-muted" style="text-align:center;padding:30px">No roasting records in this period.</p></div>';return;}
+  cont.innerHTML=Object.entries(byOrigin).sort((a,b)=>b[1].reduce((s,r)=>s+r.outKg,0)-a[1].reduce((s,r)=>s+r.outKg,0)).map(([origin,records])=>{
+    const tIn=records.reduce((s,r)=>s+r.inKg,0);
+    const tOut=records.reduce((s,r)=>s+r.outKg,0);
+    const tWaste=records.reduce((s,r)=>s+r.wasteKg,0);
+    const avgW=tIn>0?(tWaste/tIn)*100:0;
+    return `<div class="panel">
+      <div class="flex-between" style="margin-bottom:16px">
+        <h3 class="mb-0">${getOriginEmoji(origin)} ${escapeHtml(origin)}</h3>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <span class="badge gold">${fmt(tIn)} kg in</span>
+          <span class="badge green">${fmt(tOut)} kg out</span>
+          <span class="badge red">${fmt(tWaste)} kg waste</span>
+          <span class="badge ${avgW>15?'red':avgW<10?'green':'gold'}">${avgW.toFixed(1)}% avg waste</span>
+        </div>
+      </div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Date</th><th>Level</th><th>Green In</th><th>Roasted Out</th><th>Waste</th><th>Waste%</th></tr></thead>
+        <tbody>${records.map(r=>`<tr><td>${formatDate(r.date)}</td><td>${escapeHtml(r.level)}</td><td>${fmt(r.inKg)} kg</td><td class="text-green">${fmt(r.outKg)} kg</td><td class="text-red">${fmt(r.wasteKg)} kg</td><td><span class="badge ${r.wastePct>15?'red':r.wastePct<10?'green':'gold'}">${r.wastePct.toFixed(1)}%</span></td></tr>`).join('')}
+        </tbody>
+      </table></div>
+    </div>`;
+  }).join('');
+}
+
+function renderRepWasteByOrigin(filtered,from,to){
+  const cont=document.getElementById('repWasteOriginSections');
+  const byOrigin={};
+  filtered.forEach(r=>{
+    if(!byOrigin[r.sourceOrigin])byOrigin[r.sourceOrigin]=[];
+    byOrigin[r.sourceOrigin].push(r);
+  });
+  if(Object.keys(byOrigin).length===0){cont.innerHTML='<div class="panel"><p class="text-muted" style="text-align:center;padding:30px">No waste records in this period.</p></div>';return;}
+  cont.innerHTML=Object.entries(byOrigin).sort((a,b)=>{
+    const aw=a[1].reduce((s,r)=>s+r.wasteKg,0);
+    const bw=b[1].reduce((s,r)=>s+r.wasteKg,0);
+    return bw-aw;
+  }).map(([origin,records])=>{
+    const tIn=records.reduce((s,r)=>s+r.inKg,0);
+    const tWaste=records.reduce((s,r)=>s+r.wasteKg,0);
+    const avgW=tIn>0?(tWaste/tIn)*100:0;
+    return `<div class="panel">
+      <div class="flex-between" style="margin-bottom:16px">
+        <h3 class="mb-0">${getOriginEmoji(origin)} ${escapeHtml(origin)} — Waste</h3>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <span class="badge red">${fmt(tWaste)} kg total waste</span>
+          <span class="badge ${avgW>15?'red':avgW<10?'green':'gold'}">${avgW.toFixed(1)}% avg</span>
+        </div>
+      </div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Date</th><th>Green In</th><th>Waste (kg)</th><th>Waste %</th><th>Visual</th></tr></thead>
+        <tbody>${records.map(r=>`<tr>
+          <td>${formatDate(r.date)}</td>
+          <td>${fmt(r.inKg)} kg</td>
+          <td class="text-red">${fmt(r.wasteKg)} kg</td>
+          <td><span class="badge ${r.wastePct>15?'red':r.wastePct<10?'green':'gold'}">${r.wastePct.toFixed(1)}%</span></td>
+          <td style="min-width:120px"><div class="progress-bar"><div class="progress-fill ${r.wastePct>15?'red':r.wastePct<10?'green':'gold'}" style="width:${Math.min(r.wastePct*3,100)}%"></div></div></td>
+        </tr>`).join('')}
+        </tbody>
+      </table></div>
+    </div>`;
+  }).join('');
+}
+
+/* ===== CSV EXPORT ===== */
+function downloadCSV(filename,rows,headers){
+  const csvContent=[headers.join(','),...rows.map(r=>r.map(c=>`"${String(c==null?'':c).replace(/"/g,'""')}"`).join(','))].join('\r\n');
+  const blob=new Blob([csvContent],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
+  toast(`CSV downloaded: ${filename}`);
+}
+function getFromTo(){
+  const from=document.getElementById('rep-from').value||'2000-01-01';
+  const to=document.getElementById('rep-to').value||todayISO();
+  return{from,to};
+}
+function exportCSV(type){
+  const{from,to}=getFromTo();
+  const filtered=data.roasting.filter(r=>r.date>=from&&r.date<=to);
+  const filteredGB=data.greenBeans.filter(g=>g.date>=from&&g.date<=to);
+  const now=new Date().toISOString().slice(0,10);
+  if(type==='daily'){
+    const byDate={};
+    filtered.forEach(r=>{if(!byDate[r.date])byDate[r.date]={batches:0,inKg:0,outKg:0,wasteKg:0};byDate[r.date].batches++;byDate[r.date].inKg+=r.inKg;byDate[r.date].outKg+=r.outKg;byDate[r.date].wasteKg+=r.wasteKg;});
+    downloadCSV(`windmill-daily-${now}.csv`,Object.entries(byDate).sort((a,b)=>a[0].localeCompare(b[0])).map(([d,v])=>[d,v.batches,fmt(v.inKg),fmt(v.outKg),fmt(v.wasteKg),(v.inKg>0?(v.wasteKg/v.inKg)*100:0).toFixed(1)+'%']),['Date','Batches','Green In (kg)','Roasted Out (kg)','Wastage (kg)','Avg Waste %']);
+  }else if(type==='weekly'){
+    const byWeek={};
+    filtered.forEach(r=>{const wk=getWeekNumber(r.date);if(!byWeek[wk])byWeek[wk]={batches:0,inKg:0,outKg:0,wasteKg:0};byWeek[wk].batches++;byWeek[wk].inKg+=r.inKg;byWeek[wk].outKg+=r.outKg;byWeek[wk].wasteKg+=r.wasteKg;});
+    downloadCSV(`windmill-weekly-${now}.csv`,Object.entries(byWeek).map(([wk,v])=>[wk,v.batches,fmt(v.inKg),fmt(v.outKg),fmt(v.wasteKg),(v.inKg>0?(v.wasteKg/v.inKg)*100:0).toFixed(1)+'%']),['Week','Batches','Green In (kg)','Roasted Out (kg)','Wastage (kg)','Avg Waste %']);
+  }else if(type==='monthly'){
+    const byMonth={};
+    filtered.forEach(r=>{const mo=getMonthKey(r.date);if(!byMonth[mo])byMonth[mo]={batches:0,inKg:0,outKg:0,wasteKg:0};byMonth[mo].batches++;byMonth[mo].inKg+=r.inKg;byMonth[mo].outKg+=r.outKg;byMonth[mo].wasteKg+=r.wasteKg;});
+    downloadCSV(`windmill-monthly-${now}.csv`,Object.entries(byMonth).map(([mo,v])=>[mo,v.batches,fmt(v.inKg),fmt(v.outKg),fmt(v.wasteKg),(v.inKg>0?(v.wasteKg/v.inKg)*100:0).toFixed(1)+'%']),['Month','Batches','Green In (kg)','Roasted Out (kg)','Wastage (kg)','Avg Waste %']);
+  }else if(type==='stock'){
+    downloadCSV(`windmill-stock-${now}.csv`,data.greenBeans.map(g=>[g.date,g.origin,g.beanName||'',g.supplier,g.storeName||'',fmt(g.kg),fmt(g.remaining),g.batch||'',g.cost||0,g.notes||'']),['Date','Origin','Bean Name','Supplier','Store','Received (kg)','Remaining (kg)','Batch','Cost','Notes']);
+  }else if(type==='roasting_origin'){
+    const rows=[];
+    const byOrigin={};
+    filtered.forEach(r=>{if(!byOrigin[r.sourceOrigin])byOrigin[r.sourceOrigin]=[];byOrigin[r.sourceOrigin].push(r);});
+    Object.entries(byOrigin).forEach(([origin,records])=>{
+      records.forEach(r=>rows.push([origin,r.date,r.sourceBeanName||'',r.level,fmt(r.inKg),fmt(r.outKg),fmt(r.wasteKg),r.wastePct.toFixed(1)+'%',r.storeName||'',r.notes||'']));
+    });
+    downloadCSV(`windmill-roasting-by-origin-${now}.csv`,rows,['Origin','Date','Bean Name','Level','Green In (kg)','Roasted Out (kg)','Waste (kg)','Waste %','Store','Notes']);
+  }else if(type==='waste_origin'){
+    const rows=[];
+    const byOrigin={};
+    filtered.forEach(r=>{if(!byOrigin[r.sourceOrigin])byOrigin[r.sourceOrigin]=[];byOrigin[r.sourceOrigin].push(r);});
+    Object.entries(byOrigin).forEach(([origin,records])=>{
+      records.forEach(r=>rows.push([origin,r.date,fmt(r.inKg),fmt(r.wasteKg),r.wastePct.toFixed(1)+'%',r.level]));
+    });
+    downloadCSV(`windmill-waste-by-origin-${now}.csv`,rows,['Origin','Date','Green In (kg)','Waste (kg)','Waste %','Roast Level']);
+  }else if(type==='all'){
+    // Full multi-sheet style in one CSV
+    const rows=[['=== FULL WINDMILL ROASTERY EXPORT ===','','','','','','',''],['Generated',now,'','','','','',''],['','','','','','','','']];
+    rows.push(['--- GREEN BEAN STOCK RECORDS ---','','','','','','','']);
+    rows.push(['Date','Origin','Bean Name','Supplier','Store','Received (kg)','Remaining (kg)','Batch']);
+    data.greenBeans.forEach(g=>rows.push([g.date,g.origin,g.beanName||'',g.supplier,g.storeName||'',fmt(g.kg),fmt(g.remaining),g.batch||'']));
+    rows.push(['','','','','','','','']);
+    rows.push(['--- ROASTING RECORDS ---','','','','','','','']);
+    rows.push(['Date','Origin','Bean Name','Level','Green In (kg)','Roasted Out (kg)','Waste (kg)','Waste %']);
+    data.roasting.forEach(r=>rows.push([r.date,r.sourceOrigin,r.sourceBeanName||'',r.level,fmt(r.inKg),fmt(r.outKg),fmt(r.wasteKg),r.wastePct.toFixed(1)+'%']));
+    rows.push(['','','','','','','','']);
+    rows.push(['--- STORE BALANCES ---','','','','','','','']);
+    rows.push(['Store','Location','Current Balance (kg)','','','','','']);
+    getAllStoreBalances().forEach(s=>rows.push([s.name,s.location,fmt(s.balance),'','','','','']));
+    downloadCSV(`windmill-full-export-${now}.csv`,rows,['Field1','Field2','Field3','Field4','Field5','Field6','Field7','Field8']);
+    return;
+  }
+}
+
+/* ===== DATA MANAGEMENT ===== */
+function exportData(){
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download=`windmill-backup-${todayISO()}.json`;
+  document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
+  toast('Backup downloaded');
+}
+function importData(){
+  const input=document.createElement('input');input.type='file';input.accept='application/json';
+  input.onchange=(e)=>{
+    const file=e.target.files[0];if(!file)return;
+    const reader=new FileReader();
+    reader.onload=(ev)=>{
+      try{
+        const imp=JSON.parse(ev.target.result);
+        if(!imp.greenBeans||!imp.stores){toast('Invalid backup file','error');return;}
+        if(!confirm('Replace all current data with backup?'))return;
+        data=Object.assign(JSON.parse(JSON.stringify(defaultData)),imp);
+        if(data.stores)data.stores=data.stores.map(s=>{const{stock,...rest}=s;return rest;});
+        saveData();renderAll();toast('Data imported');
+      }catch(err){toast('Could not read file','error');}
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+function resetAll(){
+  requirePassword('⚠️ Reset ALL Data', 'This will permanently delete every record and cannot be undone. Enter password to confirm.', ()=>{
+    data=JSON.parse(JSON.stringify(defaultData));
+    saveData();renderAll();toast('All data reset','warn');
+  });
+}
+function clearRoastingHistory(){
+  requirePassword('Clear Roasting History', 'All roasting records will be deleted and green bean stock will be restored. Enter password to confirm.', ()=>{
+    data.roasting.forEach(r=>{const src=data.greenBeans.find(g=>g.id===r.sourceId);if(src)src.remaining+=r.inKg;});
+    data.roasting=[];saveData();renderAll();toast('Roasting history cleared','warn');
+  });
+}
+function clearGreenBeansData(){
+  requirePassword('Clear Green Bean Records', 'All green bean delivery records will be permanently deleted. Enter password to confirm.', ()=>{
+    data.greenBeans=[];saveData();renderAll();toast('Green bean records cleared','warn');
+  });
+}
+
+/* ===== MODAL ===== */
+function closeEditModal(){document.getElementById('editModal').classList.remove('show');}
+document.getElementById('editModal').addEventListener('click',function(e){if(e.target===this)closeEditModal();});
+
+/* ===== MASTER RENDER ===== */
+function renderAll(){
+  // Preserve currently-focused form field so typing isn't interrupted
+  const active=document.activeElement;
+  const activeId=active&&active.id?active.id:null;
+  const activeVal=active&&(active.tagName==='INPUT'||active.tagName==='TEXTAREA')?active.value:null;
+  const activeSelStart=active&&active.selectionStart!=null?active.selectionStart:null;
+  const activeSelEnd=active&&active.selectionEnd!=null?active.selectionEnd:null;
+
+  renderKPIs();
+  renderDashboardStores();
+  renderOriginCards();
+  renderDashRoastOrigins();
+  renderGreenBeans();
+  renderRoasting();
+  renderMovements();
+  renderStoresEdit();
+  renderRoastLevels();
+  renderInventoryLists();
+  renderReports();
+
+  // Restore focus if the element still exists after re-render
+  if(activeId){
+    const el=document.getElementById(activeId);
+    if(el&&typeof el.focus==='function'){
+      try{
+        el.focus();
+        if(activeVal!=null&&typeof el.value!=='undefined'&&el.value===activeVal){
+          if(activeSelStart!=null&&typeof el.setSelectionRange==='function'){
+            el.setSelectionRange(activeSelStart,activeSelEnd);
+          }
+        }
+      }catch(e){/* focus restore can fail for detached/hidden elements; safe to ignore */}
+    }
+  }
+}
+
+/* Targeted render — call these from hot paths instead of renderAll when possible */
+function renderLight(){
+  // For quick UI updates that don't change lots of data
+  renderKPIs();
+  renderDashboardStores();
+}
+
+/* ===== INIT ===== */
+function init(){
+  attachFirebaseListener();   /* connect to Firebase after successful login */
+  applyTheme();
+  applyRole();
+  applyAccent();
+  applyCustomColors();
+  loadFontsIntoUI();
+  loadControlPanel();
+  refreshRoastLevelDropdown();
+  document.getElementById('gb-date').value=todayISO();
+  document.getElementById('r-date').value=todayISO();
+  const mvDate=document.getElementById('mv-date');
+  if(mvDate)mvDate.value=todayISO();
+  const mvType=document.getElementById('mv-type');
+  if(mvType)mvType.addEventListener('change',refreshMVDestination);
+  updateCalc();
+  renderAll();
+}
+</script>
+</body>
+</html>
