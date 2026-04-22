@@ -25,6 +25,231 @@
   const FB_PATH = 'dashboard/data';
   const TRANSFER_REQUESTS_PATH = 'transfer_requests';
   const ROASTERY_HISTORY_PATH  = 'roastery_history';
+
+/* ═══════════════════════════════════════════════════════════════════════
+   WINDMILL STOCK ALERT SYSTEM — ROASTERY LISTENER
+   Feature 3: Real-time alerts from the Store Dashboard.
+   Uses Firebase RTDB .on('child_added') — the equivalent of Firestore's
+   onSnapshot(). Anchored to the current timestamp so only NEW alerts
+   (pushed after this page loads) trigger toasts.
+═══════════════════════════════════════════════════════════════════════ */
+let _alertLog    = [];
+let _unreadCount = 0;
+let _alertLogOpen= false;
+let _alertsRef   = null;
+let _alertMuted  = false; // mute toggle for notification sounds
+
+const ALERT_DURATIONS = { auto_out: 12000, auto_low: 8000, manual: 7000 };
+const ALERT_ICONS     = { auto_out: '🚨',  auto_low: '⚠️', manual: '📢' };
+const ALERT_CSS_TYPE  = { auto_out: 'type-out', auto_low: 'type-low', manual: 'type-manual' };
+
+/* ── Sound engine (Web Audio API — no audio files needed) ─────────────
+   auto_out → urgent triple beep  (square wave 880 Hz × 3)
+   auto_low → two-tone warning    (sine 440 Hz → 550 Hz)
+   manual   → soft single ding    (sine 660 Hz, slow fade)
+   All sounds are generated programmatically — works instantly with zero
+   extra files or CDN requests.
+──────────────────────────────────────────────────────────────────────── */
+function playAlertSound(type) {
+  if (_alertMuted) return;
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+
+    const beep = (freq, startTime, duration, waveType, volume) => {
+      const osc  = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type            = waveType || 'sine';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(volume || 0.25, ctx.currentTime + startTime);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + startTime + duration);
+      osc.start(ctx.currentTime + startTime);
+      osc.stop(ctx.currentTime  + startTime + duration);
+    };
+
+    if (type === 'auto_out') {
+      // 🚨 Triple urgent beep — high pitch square wave
+      beep(900, 0.00, 0.12, 'square', 0.30);
+      beep(900, 0.18, 0.12, 'square', 0.30);
+      beep(900, 0.36, 0.18, 'square', 0.35);
+    } else if (type === 'auto_low') {
+      // ⚠️ Two-tone warning — ascending sine tones
+      beep(440, 0.00, 0.22, 'sine', 0.22);
+      beep(580, 0.26, 0.30, 'sine', 0.22);
+    } else {
+      // 📢 Soft single ding — gentle sine fade
+      beep(660, 0.00, 0.55, 'sine', 0.18);
+    }
+  } catch(e) {
+    console.warn('[Windmill] Audio not available:', e);
+  }
+}
+
+/* ── Toggle mute ─────────────────────────────────────────────────── */
+function toggleAlertMute() {
+  _alertMuted = !_alertMuted;
+  const btn = document.getElementById('alert-mute-btn');
+  if (btn) {
+    btn.textContent = _alertMuted ? '🔇' : '🔔';
+    btn.title       = _alertMuted ? 'Alerts muted — click to unmute' : 'Mute alert sounds';
+  }
+}
+
+function initAlertListener() {
+  _alertsRef = db.ref('stock_alerts');
+  // Anchor to NOW — skips any historical alerts, only fires toasts for new ones
+  const startTs = new Date().toISOString();
+  _alertsRef
+    .orderByChild('ts')
+    .startAt(startTs)
+    .on('child_added', (snapshot) => {
+      const alert = snapshot.val();
+      if (!alert) return;
+      alert._key = snapshot.key;
+      _alertLog.unshift(alert);
+      _unreadCount++;
+      showAlertToast(alert);
+      updateAlertBell();
+      if (_alertLogOpen) renderAlertLog();
+    }, (err) => {
+      console.error('[Windmill] Alert listener error:', err);
+    });
+}
+
+function showAlertToast(alert) {
+  const tray = document.getElementById('alert-tray');
+  if (!tray) return;
+  const type     = alert.type    || 'manual';
+  const message  = alert.message || '(no message)';
+  const duration = ALERT_DURATIONS[type] || 7000;
+  const icon     = ALERT_ICONS[type]     || '🔔';
+  const cssType  = ALERT_CSS_TYPE[type]  || 'type-manual';
+  const timeStr  = _formatAlertTime(alert.ts);
+  const title    = type === 'auto_out' ? 'OUT OF STOCK'
+                 : type === 'auto_low' ? 'LOW STOCK ALERT'
+                 : 'MESSAGE FROM STORE';
+
+  // Play alert sound (respects mute toggle)
+  playAlertSound(type);
+
+  const toast = document.createElement('div');
+  toast.className = 'alert-toast ' + cssType;
+  toast.style.setProperty('--alert-duration', (duration / 1000) + 's');
+  toast.setAttribute('role', 'alert');
+  toast.innerHTML =
+    `<span class="alert-toast-icon">${icon}</span>
+     <div class="alert-toast-body">
+       <div class="alert-toast-title">${_escAlert(title)}</div>
+       <div class="alert-toast-msg">${_escAlert(message)}</div>
+       <div class="alert-toast-meta">
+         <span>Store Dashboard</span>
+         <span class="alert-toast-meta-dot"></span>
+         <span>${timeStr}</span>
+       </div>
+     </div>
+     <button class="alert-toast-close" aria-label="Dismiss">✕</button>
+     <div class="alert-toast-progress"></div>`;
+
+  toast.addEventListener('click', () => _dismissToast(toast));
+  const timer = setTimeout(() => _dismissToast(toast), duration);
+  toast.querySelector('.alert-toast-close').addEventListener('click', (e) => {
+    e.stopPropagation();
+    clearTimeout(timer);
+    _dismissToast(toast);
+  });
+  tray.appendChild(toast);
+}
+
+function _dismissToast(toast) {
+  if (!toast || toast.classList.contains('dismissing')) return;
+  toast.classList.add('dismissing');
+  setTimeout(() => { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 320);
+}
+
+function updateAlertBell() {
+  const btn   = document.getElementById('alert-bell-btn');
+  const badge = document.getElementById('alert-bell-count');
+  if (!btn || !badge) return;
+  if (_unreadCount > 0) {
+    btn.classList.add('has-alerts');
+    badge.textContent = _unreadCount > 99 ? '99+' : String(_unreadCount);
+  } else {
+    btn.classList.remove('has-alerts');
+  }
+}
+
+function toggleAlertLog() {
+  _alertLogOpen = !_alertLogOpen;
+  const panel = document.getElementById('alert-log-panel');
+  if (!panel) return;
+  if (_alertLogOpen) {
+    panel.classList.add('open');
+    _unreadCount = 0;
+    updateAlertBell();
+    renderAlertLog();
+  } else {
+    panel.classList.remove('open');
+  }
+}
+
+function renderAlertLog() {
+  const body = document.getElementById('alert-log-body');
+  if (!body) return;
+  if (_alertLog.length === 0) {
+    body.innerHTML = '<div class="alert-log-empty">No alerts yet — alerts from the Store Dashboard will appear here in real-time.</div>';
+    return;
+  }
+  body.innerHTML = _alertLog.map((alert) => {
+    const type    = alert.type || 'manual';
+    const cssType = ALERT_CSS_TYPE[type] || 'type-manual';
+    return `<div class="alert-log-row">
+      <div class="alert-log-dot ${cssType}"></div>
+      <div style="flex:1;min-width:0">
+        <div class="alert-log-text">${_escAlert(alert.message || '')}</div>
+        <div class="alert-log-time">${_formatAlertTime(alert.ts)}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function clearAlertLog() {
+  _alertLog    = [];
+  _unreadCount = 0;
+  updateAlertBell();
+  renderAlertLog();
+}
+
+// Close log panel when clicking outside
+document.addEventListener('click', (e) => {
+  if (!_alertLogOpen) return;
+  const panel = document.getElementById('alert-log-panel');
+  const bell  = document.getElementById('alert-bell-btn');
+  if (panel && !panel.contains(e.target) && bell && !bell.contains(e.target)) {
+    _alertLogOpen = false;
+    panel.classList.remove('open');
+  }
+});
+
+function _formatAlertTime(isoString) {
+  if (!isoString) return 'Just now';
+  try {
+    const d = new Date(isoString);
+    const diffMin = Math.floor((Date.now() - d) / 60000);
+    if (diffMin < 1)  return 'Just now';
+    if (diffMin < 60) return diffMin + 'm ago';
+    const diffHr = Math.floor(diffMin / 60);
+    if (diffHr < 24)  return diffHr + 'h ago';
+    return d.toLocaleDateString([], { day: 'numeric', month: 'short' });
+  } catch(e) { return ''; }
+}
+
+function _escAlert(str) {
+  return String(str == null ? '' : str)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+/* ═══════════════════════════════════════════════════════════════════════ */
 </script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:wght@500;600;700&family=Inter:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&family=Montserrat:wght@400;500;600;700&family=Lato:wght@400;700&family=Roboto+Mono:wght@500;700&family=DM+Serif+Display&family=Libre+Caslon+Text:wght@400;700&display=swap');
@@ -142,7 +367,7 @@ h1,h2,h3,h4,h5,h6,.section-title,.origin-name,.origin-section-title,.store-name,
 
 /* ===== ROASTERY STOCK BY ORIGIN ===== */
 .roastery-origin-stock-block{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:24px;margin-bottom:24px}
-.ros-origin-row{display:grid;grid-template-columns:140px 1fr 90px 100px;align-items:center;gap:14px;padding:10px 0;border-bottom:1px solid var(--line)}
+.ros-origin-row{display:grid;grid-template-columns:140px 1fr 90px;align-items:center;gap:14px;padding:10px 0;border-bottom:1px solid var(--line)}
 .ros-origin-row:last-child{border-bottom:none}
 .ros-origin-name{font-weight:600;color:var(--heading);font-size:14px;font-family:var(--font-head)}
 .ros-origin-meta{font-size:11px;color:var(--muted);margin-top:2px}
@@ -604,6 +829,57 @@ body.theme-light .inv-chip{background:linear-gradient(135deg,#ffffff 0%,#fbf7ee 
 .progress-fill.green{background:linear-gradient(90deg,var(--green-2),var(--green))}
 .progress-fill.red{background:linear-gradient(90deg,var(--red),#9c3929)}
 .progress-fill.gold{background:linear-gradient(90deg,var(--gold),var(--gold-2))}
+
+/* ═══ WINDMILL STOCK ALERT NOTIFICATION SYSTEM ═════════════════════ */
+#alert-tray{position:fixed;top:80px;right:20px;z-index:99999;display:flex;flex-direction:column;gap:10px;pointer-events:none;max-width:380px;width:calc(100vw - 40px);}
+.alert-toast{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px;box-shadow:0 8px 32px rgba(0,0,0,.18);display:flex;gap:12px;align-items:flex-start;pointer-events:all;cursor:pointer;animation:alertSlideIn .38s cubic-bezier(.34,1.56,.64,1) forwards;position:relative;overflow:hidden;transition:box-shadow .2s,transform .2s;}
+.alert-toast:hover{box-shadow:0 12px 40px rgba(0,0,0,.22);transform:translateX(-3px);}
+.alert-toast.dismissing{animation:alertSlideOut .3s ease forwards;}
+.alert-toast::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;border-radius:14px 0 0 14px;}
+.alert-toast.type-out::before{background:var(--red);}
+.alert-toast.type-low::before{background:var(--gold);}
+.alert-toast.type-manual::before{background:var(--teal);}
+.alert-toast-icon{font-size:22px;flex-shrink:0;margin-top:1px;line-height:1;}
+.alert-toast-body{flex:1;min-width:0;}
+.alert-toast-title{font-family:var(--font-head);font-size:13px;font-weight:700;color:var(--heading);margin-bottom:3px;line-height:1.2;word-break:break-word;}
+.alert-toast-msg{font-size:12px;color:var(--muted);line-height:1.45;word-break:break-word;}
+.alert-toast-meta{font-size:10px;color:var(--muted);opacity:.7;margin-top:5px;display:flex;align-items:center;gap:5px;}
+.alert-toast-meta-dot{width:3px;height:3px;border-radius:50%;background:currentColor;flex-shrink:0;}
+.alert-toast-close{flex-shrink:0;background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer;padding:0 0 0 4px;line-height:1;opacity:.6;transition:opacity .15s;font-family:sans-serif;}
+.alert-toast-close:hover{opacity:1;}
+.alert-toast-progress{position:absolute;bottom:0;left:0;height:3px;border-radius:0 0 14px 14px;animation:alertProgress var(--alert-duration,7s) linear forwards;}
+.alert-toast.type-out .alert-toast-progress{background:var(--red);}
+.alert-toast.type-low .alert-toast-progress{background:var(--gold);}
+.alert-toast.type-manual .alert-toast-progress{background:var(--teal);}
+#alert-bell-btn{background:none;border:1px solid var(--line);border-radius:8px;padding:6px 10px;cursor:pointer;font-size:16px;display:flex;align-items:center;gap:6px;color:var(--muted);transition:border-color .2s,background .2s;white-space:nowrap;}
+#alert-bell-btn:hover{border-color:var(--gold);background:var(--gold-dim);}
+#alert-bell-btn.has-alerts{border-color:var(--gold);color:var(--gold-2);animation:bellPulse 2s ease-in-out infinite;}
+#alert-bell-count{background:var(--red);color:#fff;border-radius:10px;font-size:10px;font-weight:700;padding:1px 6px;min-width:18px;text-align:center;display:none;}
+#alert-bell-btn.has-alerts #alert-bell-count{display:inline-block;}
+#alert-log-panel{position:fixed;top:70px;right:16px;width:360px;max-width:calc(100vw - 32px);background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:0 16px 48px rgba(0,0,0,.18);z-index:99998;display:none;flex-direction:column;overflow:hidden;animation:alertSlideIn .25s ease forwards;}
+#alert-log-panel.open{display:flex;}
+.alert-log-header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--line);background:var(--panel-2);}
+.alert-log-title{font-family:var(--font-head);font-size:15px;font-weight:700;color:var(--heading);}
+.alert-log-clear{background:none;border:1px solid var(--line);border-radius:6px;font-size:10px;color:var(--muted);padding:4px 10px;cursor:pointer;transition:border-color .15s,color .15s;}
+.alert-log-clear:hover{border-color:var(--red);color:var(--red);}
+.alert-log-body{max-height:340px;overflow-y:auto;}
+.alert-log-empty{padding:32px 20px;text-align:center;color:var(--muted);font-size:13px;opacity:.7;}
+.alert-log-row{display:flex;gap:10px;padding:11px 16px;border-bottom:1px solid var(--line);align-items:flex-start;transition:background .15s;}
+.alert-log-row:last-child{border-bottom:none;}
+.alert-log-row:hover{background:var(--panel-2);}
+.alert-log-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:4px;}
+.alert-log-dot.type-out{background:var(--red);}
+.alert-log-dot.type-low{background:var(--gold);}
+.alert-log-dot.type-manual{background:var(--teal);}
+.alert-log-text{flex:1;font-size:12px;color:var(--text);line-height:1.45;word-break:break-word;}
+.alert-log-time{font-size:10px;color:var(--muted);white-space:nowrap;margin-top:2px;}
+body.theme-dark .alert-toast{box-shadow:0 8px 32px rgba(0,0,0,.45);}
+body.theme-dark #alert-log-panel{box-shadow:0 16px 48px rgba(0,0,0,.45);}
+@keyframes alertSlideIn{from{opacity:0;transform:translateX(30px) scale(.95);}to{opacity:1;transform:translateX(0) scale(1);}}
+@keyframes alertSlideOut{from{opacity:1;transform:translateX(0) scale(1);max-height:120px;}to{opacity:0;transform:translateX(30px) scale(.95);max-height:0;}}
+@keyframes alertProgress{from{width:100%;}to{width:0%;}}
+@keyframes bellPulse{0%,100%{transform:rotate(0);}20%{transform:rotate(-12deg);}40%{transform:rotate(12deg);}60%{transform:rotate(-6deg);}80%{transform:rotate(6deg);}}
+/* ════════════════════════════════════════════════════════════════════ */
 </style>
 </head>
 <body>
@@ -705,8 +981,10 @@ body.theme-light .inv-chip{background:linear-gradient(135deg,#ffffff 0%,#fbf7ee 
     <span id="lastSyncedLabel"></span>
     <button class="btn-ghost sync-refresh-btn" id="syncRefreshBtn" onclick="manualSync()" title="Pull latest data from server"><i class="sync-icon">↻</i> Sync</button>
     <div class="simple-clock" id="simpleClock">--:--:--</div>
+    <button id="alert-bell-btn" onclick="toggleAlertLog()" title="Store stock alerts">🔔 <span id="alert-bell-count">0</span></button>
+    <button id="alert-mute-btn" onclick="toggleAlertMute()" title="Mute alert sounds" style="background:none;border:1px solid var(--line);border-radius:8px;padding:6px 9px;cursor:pointer;font-size:15px;color:var(--muted);transition:border-color .2s,background .2s;" onmouseenter="this.style.borderColor='var(--gold)'" onmouseleave="this.style.borderColor='var(--line)'">🔔</button>
     <button class="btn-ghost" onclick="toggleTheme()" title="Toggle theme" id="themeToggleBtn">🌙</button>
-    <button class="btn-ghost" onclick="doLogout()">Log Out</button>
+    <button class="btn-ghost logout-btn" onclick="doLogout()" title="Log Out" aria-label="Log Out" style="padding:6px 10px;font-size:18px;line-height:1;display:flex;align-items:center;justify-content:center;border-radius:8px;"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button>
   </div>
 </header>
 
@@ -1442,6 +1720,10 @@ body.theme-light .inv-chip{background:linear-gradient(135deg,#ffffff 0%,#fbf7ee 
     <div class="settings-row">
       <div class="settings-row-info"><p>Clear Green Bean Records</p><span>Delete all green bean inventory only.</span></div>
       <button class="btn btn-danger btn-sm" onclick="clearGreenBeansData()">Clear Green Beans</button>
+    </div>
+    <div class="settings-row">
+      <div class="settings-row-info"><p>Clear Transfer History Log</p><span>Permanently delete all transfer history records from Firebase. Cannot be undone.</span></div>
+      <button class="btn btn-danger btn-sm" onclick="clearAllTransferHistory()">Clear Transfer History</button>
     </div>
   </div>
 </section>
@@ -2584,7 +2866,6 @@ function renderRoasteryOriginStock(){
         <div class="ros-sent-label">Sent to store: ${fmt(v.sent)} kg</div>
       </div>
       <div class="ros-avail-val">${fmt(v.available)} kg</div>
-      <div>${v.available<=0?'<span class="badge red">Depleted</span>':v.available<v.total*0.2?'<span class="badge gold">Low</span>':'<span class="badge green">In Stock</span>'}</div>
     </div>`).join('');
 }
 
@@ -2633,6 +2914,35 @@ function renderTransferHistoryLog(){
       <td>${statusHtml}</td>
     </tr>`;
   }).join('');
+}
+
+/* ===== ERP — DELETE TRANSFER HISTORY ENTRY ===== */
+function deleteTransferHistoryEntry(nodeKey, transferKey) {
+  requirePassword('Delete Transfer Record', 'Remove this transfer record from history? This only removes the log entry and does not affect roasted bean stock.', () => {
+    const promises = [];
+
+    /* 1. Remove from roastery_history using the Firebase node key directly */
+    if (nodeKey) {
+      promises.push(db.ref(ROASTERY_HISTORY_PATH + '/' + nodeKey).remove().catch(e => console.warn('[Delete] history remove failed:', e)));
+    }
+
+    /* 2. Remove from transfer_requests using the transfer_key */
+    if (transferKey) {
+      promises.push(db.ref(TRANSFER_REQUESTS_PATH + '/' + transferKey).remove().catch(e => console.warn('[Delete] request remove failed:', e)));
+    }
+
+    /* 3. Optimistically remove from local arrays immediately so UI feels instant */
+    if (nodeKey) {
+      roasteryHistory = roasteryHistory.filter(h => h.key !== nodeKey);
+    }
+    if (transferKey) {
+      roasteryTransferRequests = roasteryTransferRequests.filter(t => t.key !== transferKey);
+    }
+
+    /* 4. Re-render immediately (Firebase listener will also fire and confirm) */
+    renderTransferHistoryLog();
+    toast('Transfer record deleted', 'warn');
+  });
 }
 
 /* Timestamp formatter: ISO → human-readable "22 Apr 2026, 14:35" */
@@ -3574,6 +3884,21 @@ function clearGreenBeansData(){
     data.greenBeans=[];saveData();renderAll();toast('Green bean records cleared','warn');
   });
 }
+function clearAllTransferHistory(){
+  requirePassword('Clear Transfer History', 'ALL transfer history records will be permanently deleted from Firebase. This cannot be undone. Enter password to confirm.', ()=>{
+    /* Remove entire roastery_history node and all transfer_requests from Firebase */
+    const p1 = db.ref(ROASTERY_HISTORY_PATH).remove().catch(e=>console.warn('[ClearHistory]',e));
+    const p2 = db.ref(TRANSFER_REQUESTS_PATH).remove().catch(e=>console.warn('[ClearRequests]',e));
+    /* Clear local arrays immediately */
+    roasteryHistory = [];
+    roasteryTransferRequests = [];
+    renderTransferHistoryLog();
+    renderActiveShipments();
+    Promise.all([p1,p2]).then(()=>{
+      toast('Transfer history cleared','warn');
+    });
+  });
+}
 
 /* ===== MODAL ===== */
 function closeEditModal(){document.getElementById('editModal').classList.remove('show');}
@@ -3629,6 +3954,7 @@ function renderLight(){
 
 /* ===== INIT ===== */
 function init(){
+  initAlertListener();   // ← start listening to store alerts immediately
   attachFirebaseListener();   /* connect to Firebase after successful login */
   applyTheme();
   applyRole();
@@ -3647,5 +3973,20 @@ function init(){
   renderAll();
 }
 </script>
+
+<!-- ═══ STOCK ALERT NOTIFICATION TRAY (auto-populated by JS) ═══ -->
+<div id="alert-tray" aria-live="polite" aria-label="Stock alert notifications"></div>
+
+<!-- ═══ STOCK ALERT LOG PANEL ═══ -->
+<div id="alert-log-panel" role="dialog" aria-label="Alert history">
+  <div class="alert-log-header">
+    <span class="alert-log-title">🔔 Store Alerts</span>
+    <button class="alert-log-clear" onclick="clearAlertLog()">Clear all</button>
+  </div>
+  <div class="alert-log-body" id="alert-log-body">
+    <div class="alert-log-empty">No alerts yet — alerts from the Store Dashboard will appear here in real-time.</div>
+  </div>
+</div>
+
 </body>
 </html>
