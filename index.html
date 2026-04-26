@@ -17,14 +17,25 @@
     messagingSenderId: "windmill-beans",
     appId: "windmill-beans"
   };
-  /* Guard against double-init (e.g. hot-reload) */
-  const _fbApp = (firebase.apps && firebase.apps.length > 0)
-    ? firebase.app()
-    : firebase.initializeApp(firebaseConfig);
-  const db = firebase.database(_fbApp);
   const FB_PATH = 'dashboard/data';
   const TRANSFER_REQUESTS_PATH = 'transfer_requests';
   const ROASTERY_HISTORY_PATH  = 'roastery_history';
+
+  /* Safe Firebase init — wrapped so a blocked/missing SDK never crashes the app */
+  let db = null;
+  try {
+    if (typeof firebase !== 'undefined') {
+      const _fbApp = (firebase.apps && firebase.apps.length > 0)
+        ? firebase.app()
+        : firebase.initializeApp(firebaseConfig);
+      db = firebase.database(_fbApp);
+    } else {
+      console.warn('[Windmill] Firebase SDK not available — running in local-only mode.');
+    }
+  } catch(e) {
+    console.warn('[Windmill] Firebase init failed — running in local-only mode.', e);
+    db = null;
+  }
 
 /* ═══════════════════════════════════════════════════════════════════════
    WINDMILL STOCK ALERT SYSTEM — ROASTERY LISTENER
@@ -97,6 +108,7 @@ function toggleAlertMute() {
 }
 
 function initAlertListener() {
+  if(!db){ console.warn('[Windmill] Alert listener skipped — no Firebase.'); return; }
   _alertsRef = db.ref('stock_alerts');
   // Anchor to NOW — skips any historical alerts, only fires toasts for new ones
   const startTs = new Date().toISOString();
@@ -293,6 +305,24 @@ function _escAlert(str) {
   --font-head:'Playfair Display',serif;
   --font-num:'Playfair Display',serif;
   --font-scale:1;
+
+  /* ─── Unified card design tokens ─── */
+  /* All dashboard cards (origin, store, roasting) use these so they share
+     consistent dimensions, padding, and rhythm. */
+  --card-radius:16px;
+  --card-padding:24px;
+  --card-gap:20px;
+  --card-min-width:340px;
+  --card-min-height:240px;
+  --card-shadow:0 1px 2px rgba(58,44,30,.03);
+  --card-shadow-hover:0 10px 28px rgba(58,44,30,.10);
+  --card-header-min-height:60px;
+  --card-stat-min-height:74px;
+  --card-stat-radius:11px;
+  --card-stat-padding:12px 8px;
+  --card-stat-val-size:19px;
+  --card-stat-lbl-size:10px;
+  --card-title-size:18px;
 }
 /* DARK (coffee night) THEME — optional via toggle */
 body.theme-dark{
@@ -501,7 +531,7 @@ main{padding:32px 40px;max-width:1700px;margin:0 auto}
 .sub-heading{font-family:var(--font-body);font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:2.5px;font-weight:600;margin:24px 0 10px 0;padding-bottom:12px;border-bottom:1px solid var(--line)}
 
 /* ===== SECTION TITLE ===== */
-h2.section-title{font-family:var(--font-head);font-size:22px;color:var(--heading);margin:36px 0 18px 0;display:flex;align-items:center;gap:14px;font-weight:700;letter-spacing:-.2px;position:relative}
+h2.section-title{font-family:var(--font-head);font-size:24px;color:var(--heading);margin:42px 0 20px 0;display:flex;align-items:center;gap:14px;font-weight:700;letter-spacing:-.2px;position:relative}
 h2.section-title::before,h2.section-title::after{display:none}
 h3{font-family:var(--font-head);font-size:17px;color:var(--heading);margin-bottom:14px;font-weight:600;letter-spacing:0}
 
@@ -551,42 +581,102 @@ h3{font-family:var(--font-head);font-size:17px;color:var(--heading);margin-botto
 .kpi.hero:hover{background:var(--coffee);border-color:var(--coffee-dark)}
 
 /* ===== ORIGIN CARDS ===== */
-.origins-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:16px;margin-bottom:24px}
-.origin-card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px;transition:all .2s;position:relative;overflow:hidden;box-shadow:0 1px 2px rgba(58,44,30,.03)}
-.origin-card:hover{transform:translateY(-2px);border-color:var(--gold);box-shadow:0 8px 24px rgba(58,44,30,.08)}
+/* ── Green Beans by Origin grid — auto-fit so cards expand to fill, not just fill columns ── */
+.origins-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(320px,1fr));
+  gap:20px;
+  margin-bottom:28px;
+  align-items:stretch;       /* every card stretches to row height */
+}
+.origin-card{
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:var(--card-radius);
+  padding:var(--card-padding);
+  transition:all .2s;
+  position:relative;
+  overflow:hidden;            /* contains the variation accent bar */
+  box-shadow:var(--card-shadow);
+  min-height:var(--card-min-height);
+  height:100%;                /* fill row height for equal-height cards */
+  display:flex;
+  flex-direction:column;
+  text-align:left;            /* explicit left alignment for all text */
+  box-sizing:border-box;      /* padding included in width — no overflow */
+  min-width:0;                /* allow cards to shrink inside grid track without clipping */
+}
+.origin-card:hover{transform:translateY(-2px);border-color:var(--gold);box-shadow:var(--card-shadow-hover)}
 .origin-card::before{display:none}
-.origin-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px}
-.origin-name{font-family:var(--font-head);font-size:17px;font-weight:700;color:var(--heading)}
-.origin-supplier{font-family:var(--font-body);font-size:11.5px;color:var(--muted);margin-top:2px;letter-spacing:.3px}
-.origin-bean-name{font-family:var(--font-body);font-size:12px;color:var(--gold-2);margin-top:2px;font-style:normal}
-.origin-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px}
-.origin-stat{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px;text-align:center}
-.origin-stat-val{font-family:var(--font-num);font-size:18px;font-weight:700;color:var(--heading)}
-.origin-stat-lbl{font-family:var(--font-body);font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-top:2px;font-weight:600}
+.origin-header{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:18px;min-height:var(--card-header-min-height)}
+.origin-name{font-family:var(--font-head);font-size:var(--card-title-size);font-weight:700;color:var(--heading);line-height:1.2;text-align:left;word-break:break-word}
+.origin-supplier{font-family:var(--font-body);font-size:12px;color:var(--muted);margin-top:4px;letter-spacing:.3px;text-align:left}
+.origin-bean-name{font-family:var(--font-body);font-size:12.5px;color:var(--gold-2);margin-top:3px;font-style:normal;line-height:1.3;text-align:left;word-break:break-word}
+.origin-stat{background:var(--bg);border:1px solid var(--line);border-radius:var(--card-stat-radius);padding:var(--card-stat-padding);text-align:center;display:flex;flex-direction:column;justify-content:center;align-items:center;min-height:var(--card-stat-min-height);min-width:0}
+.origin-stat-val{font-family:var(--font-num);font-size:var(--card-stat-val-size);font-weight:700;color:var(--heading);line-height:1.05;letter-spacing:-.2px;white-space:nowrap}
+.origin-stat-unit{font-size:11px;color:var(--muted);font-weight:500}
+.origin-stat-lbl{font-family:var(--font-body);font-size:var(--card-stat-lbl-size);color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-top:5px;font-weight:600;line-height:1.2}
 .origin-stat.gb .origin-stat-val{color:var(--gold-2)}
 .origin-stat.roast .origin-stat-val{color:var(--green-2)}
 .origin-stat.waste .origin-stat-val{color:var(--red)}
+
+/* Variation tile — same dimensions as origin card, distinct gold accent contained inside */
+.variation-card{
+  border-color:rgba(176,142,74,.35);
+  background:linear-gradient(135deg,var(--panel) 0%,rgba(176,142,74,.06) 100%);
+  /* Inset the content past the 4 px accent bar so children don't sit underneath it */
+  padding-left:calc(var(--card-padding) + 4px);
+}
+.variation-card::before{
+  content:'';
+  display:block;
+  position:absolute;
+  left:0;top:0;bottom:0;
+  width:4px;
+  background:linear-gradient(180deg,var(--gold-2) 0%,var(--gold) 100%);
+  /* No border-radius here — overflow:hidden on parent already clips it cleanly */
+}
+.variation-card:hover{border-color:var(--gold-2);box-shadow:0 10px 28px rgba(176,142,74,.18)}
+.variation-card .origin-name{display:flex;flex-direction:column-reverse;gap:6px;align-items:flex-start}
+.variation-tag{display:inline-block;font-size:9.5px;font-weight:800;background:var(--gold-2);color:#fff;padding:3px 8px;border-radius:4px;letter-spacing:.8px;text-transform:uppercase;line-height:1.2;align-self:flex-start;box-shadow:0 1px 3px rgba(176,142,74,.3)}
+
+/* Inline variation chips (shown under each origin card) */
+.origin-variations-inline{margin-top:14px;border-top:1px dashed var(--line);padding-top:11px}
+.origin-variations-label{font-family:var(--font-body);font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;font-weight:600;margin-bottom:7px;text-align:left}
+.origin-variations-chips{display:flex;flex-wrap:wrap;gap:6px}
+.variation-chip{display:inline-flex;align-items:center;gap:4px;background:rgba(176,142,74,.10);border:1px solid rgba(176,142,74,.28);color:var(--gold-2);padding:4px 9px;border-radius:8px;font-size:12px;font-weight:500;white-space:nowrap;max-width:100%}
+.variation-chip strong{color:var(--heading);font-weight:700;font-family:var(--font-num)}
+
+.origin-stats{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:0;align-items:stretch}
+@media (min-width:900px){.origin-stats{grid-template-columns:repeat(4,1fr)}}
 .origin-stores{margin-top:10px;display:flex;flex-wrap:wrap;gap:6px}
 
-/* ===== STORE CARDS — styled to match origin cards, 20% larger, flexbox centred ===== */
-.stores-grid{display:flex;flex-wrap:wrap;justify-content:center;gap:19px;margin-bottom:24px}
-.store-card{width:372px;flex-shrink:0;flex-grow:0;background:var(--panel);border:1px solid var(--line);border-radius:17px;padding:24px;position:relative;overflow:hidden;transition:all .2s;box-shadow:0 1px 2px rgba(58,44,30,.03)}
-.store-card:hover{transform:translateY(-2px);border-color:var(--gold);box-shadow:0 8px 24px rgba(58,44,30,.08)}
+/* ===== STORE CARDS — share design tokens with origin cards ===== */
+.stores-grid{display:flex;flex-wrap:wrap;justify-content:center;gap:var(--card-gap);margin-bottom:28px}
+.store-card{width:430px;flex-shrink:0;flex-grow:0;background:var(--panel);border:1px solid var(--line);border-radius:var(--card-radius);padding:var(--card-padding);position:relative;overflow:hidden;transition:all .2s;box-shadow:var(--card-shadow);display:flex;flex-direction:column}
+.store-card:hover{transform:translateY(-2px);border-color:var(--gold);box-shadow:var(--card-shadow-hover)}
 .store-card::before{display:none}
-.store-card-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:19px}
-.store-name{font-family:var(--font-head);font-size:20px;font-weight:700;color:var(--heading);margin-bottom:2px}
-.store-loc{font-family:var(--font-body);font-size:13px;color:var(--muted);margin-top:3px;letter-spacing:.3px}
-.store-stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
-.store-stat{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:12px;text-align:center}
-.store-stat-val{font-family:var(--font-num);font-size:22px;font-weight:700;color:var(--heading);line-height:1;letter-spacing:-.3px}
-.store-stat-lbl{font-family:var(--font-body);font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-top:3px;font-weight:600}
+.store-card-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:18px;min-height:var(--card-header-min-height)}
+.store-name{font-family:var(--font-head);font-size:21px;font-weight:700;color:var(--heading);margin-bottom:2px;line-height:1.15}
+.store-loc{font-family:var(--font-body);font-size:13px;color:var(--muted);margin-top:4px;letter-spacing:.3px}
+.store-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;align-items:stretch}
+.store-stat{background:var(--bg);border:1px solid var(--line);border-radius:var(--card-stat-radius);padding:var(--card-stat-padding);text-align:center;display:flex;flex-direction:column;justify-content:center;align-items:center;min-height:var(--card-stat-min-height)}
+.store-stat-val{font-family:var(--font-num);font-size:22px;font-weight:700;color:var(--heading);line-height:1.05;letter-spacing:-.3px;white-space:nowrap}
+.store-stat-lbl{font-family:var(--font-body);font-size:var(--card-stat-lbl-size);color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-top:5px;font-weight:600;line-height:1.2}
 .store-stat.balance .store-stat-val{color:var(--gold-2)}
 .store-stat.status-val .store-stat-val{color:var(--green-2)}
-.store-origins-list{margin-top:12px;border-top:1px solid var(--line);padding-top:11px;display:flex;flex-direction:column;gap:7px}
-.store-origin-row{display:flex;justify-content:space-between;font-size:13.5px;align-items:center}
-.store-origin-row span:first-child{color:var(--muted);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-right:8px}
+.store-origins-list{margin-top:14px;border-top:1px solid var(--line);padding-top:13px;display:flex;flex-direction:column;gap:8px}
+.store-origin-row{display:flex;justify-content:space-between;font-size:14px;align-items:center;gap:8px}
+.store-origin-row span:first-child{color:var(--muted);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .store-origin-row span:last-child{color:var(--text);font-weight:600;white-space:nowrap}
 .status-dot{display:none}
+
+/* Per-batch parent block inside store card */
+.store-batch-block{margin-bottom:11px;border:1px solid var(--line);border-radius:10px;padding:11px 13px;background:rgba(176,142,74,.05)}
+.store-batch-block:last-child{margin-bottom:0}
+.store-batch-head{display:flex;justify-content:space-between;align-items:center;font-weight:600;font-size:14px;border-bottom:1px dashed var(--line);padding-bottom:7px;margin-bottom:7px;gap:8px}
+.store-batch-child{display:flex;justify-content:space-between;align-items:center;font-size:13px;padding:3px 0 3px 18px;gap:8px}
+.store-batch-child > span:last-child{font-weight:600;color:var(--text);white-space:nowrap}
 
 /* ===== TOAST ===== */
 .toast{position:fixed;bottom:24px;right:24px;background:var(--panel);border:1px solid var(--line);color:var(--text);padding:14px 24px;border-radius:12px;box-shadow:0 12px 32px rgba(58,44,30,.15),0 0 0 1px rgba(58,44,30,.04);z-index:9999;transform:translateX(140%);transition:transform .35s cubic-bezier(.34,1.56,.64,1);font-family:var(--font-body);font-size:14px;font-weight:500;display:flex;align-items:center;gap:10px;max-width:360px}
@@ -701,6 +791,106 @@ tr:hover td{background:var(--panel-3)}
 .badge.purple{background:var(--purple-dim);color:var(--purple);border:1px solid rgba(138,107,156,.2)}
 .badge.teal{background:var(--teal-dim);color:var(--teal);border:1px solid rgba(90,144,128,.2)}
 
+/* ===== REFINED REPORT TABLES (Daily / Weekly / Monthly Roasting) =====
+   Same data, same arrangement — just more breathable, scannable, polished.
+   Uses .report-table to opt-in without affecting other tables in the app. */
+.report-table{font-size:13px}
+.report-table thead th{
+  padding:13px 16px;
+  font-size:10px;
+  letter-spacing:1.6px;
+  background:var(--panel-3);
+  color:var(--muted);
+  border-bottom:1px solid var(--line);
+}
+.report-table thead th.num{text-align:right}
+.report-table tbody td{
+  padding:14px 16px;
+  border-bottom:1px solid var(--line);
+  vertical-align:middle;
+  transition:background .15s ease;
+}
+.report-table tbody tr:nth-child(even) td{background:rgba(0,0,0,.012)}
+body.theme-dark .report-table tbody tr:nth-child(even) td{background:rgba(255,255,255,.018)}
+.report-table tbody tr:hover td{background:var(--panel-3)}
+.report-table tbody tr:last-child td{border-bottom:none}
+
+/* Period column (Date / Week / Month) — pill-style label */
+.report-table .col-period{width:1%;white-space:nowrap}
+.report-table .period-pill{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:6px 12px;
+  background:var(--panel-3);
+  border:1px solid var(--line);
+  border-radius:8px;
+  font-family:var(--font-head);
+  font-size:13px;
+  font-weight:600;
+  color:var(--heading);
+  letter-spacing:.2px;
+}
+.report-table .period-pill::before{
+  content:'';
+  width:6px;height:6px;border-radius:50%;
+  background:var(--coffee);
+  flex-shrink:0;
+}
+
+/* Numeric columns — right-aligned, tabular figures */
+.report-table .num{
+  text-align:right;
+  font-variant-numeric:tabular-nums;
+  font-feature-settings:"tnum";
+}
+.report-table .num .unit{
+  color:var(--muted);
+  font-size:11px;
+  margin-left:3px;
+  font-weight:400;
+}
+.report-table .num strong{font-weight:600;color:var(--text)}
+.report-table .num.in strong{color:var(--gold-2)}
+.report-table .num.out strong{color:var(--green-2)}
+.report-table .num.waste strong{color:var(--red)}
+.report-table .num.batches strong{
+  display:inline-block;min-width:28px;text-align:center;
+  padding:3px 10px;border-radius:20px;
+  background:var(--panel-3);border:1px solid var(--line);
+  color:var(--heading);font-size:12px;
+}
+
+/* Avg waste% column — anchored right */
+.report-table .col-avg{text-align:right;width:1%;white-space:nowrap}
+
+/* Totals footer row */
+.report-table tfoot td{
+  padding:14px 16px;
+  border-top:2px solid var(--line);
+  background:var(--panel-3);
+  font-weight:600;
+  color:var(--heading);
+  font-size:12.5px;
+}
+.report-table tfoot td:first-child{
+  font-family:var(--font-head);
+  text-transform:uppercase;
+  letter-spacing:1.2px;
+  font-size:11px;
+  color:var(--muted);
+}
+.report-table tfoot .num{font-variant-numeric:tabular-nums}
+.report-table tfoot .num strong{font-size:13px}
+
+/* Empty state for refined tables */
+.report-table .empty-row td{
+  text-align:center;
+  padding:48px 20px;
+  color:var(--muted);
+}
+.report-table .empty-row td .empty-ico{
+  display:block;font-size:28px;margin-bottom:8px;opacity:.5;
+}
+
 /* ===== CALC BOX — duplicate block removed, see primary definition above ===== */
 
 /* ===== CHART ===== */
@@ -807,21 +997,22 @@ body.theme-light .inv-chip{background:linear-gradient(135deg,#ffffff 0%,#fbf7ee 
 /* ===== DIVIDER ===== */
 .section-divider{height:1px;background:var(--line);margin:24px 0}
 
-/* ===== ROASTING ORIGIN OVERVIEW ===== */
-.roast-origin-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;margin-bottom:20px}
-.roast-origin-card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px;transition:all .2s;box-shadow:0 1px 2px rgba(58,44,30,.03)}
-.roast-origin-card:hover{border-color:var(--green-2);transform:translateY(-2px)}
-.roast-origin-card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--line)}
-.roast-origin-name{font-family:var(--font-head);font-size:17px;color:var(--heading);font-weight:700}
-.roast-stats-row{display:flex;gap:10px;margin-top:10px;flex-wrap:wrap}
-.roast-stat-mini{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 12px;flex:1;min-width:70px;text-align:center}
-.roast-stat-mini-val{font-family:var(--font-num);font-size:17px;font-weight:700;color:var(--heading)}
-.roast-stat-mini-lbl{font-family:var(--font-body);font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-weight:600}
+/* ===== ROASTING ORIGIN OVERVIEW — uses unified card tokens ===== */
+.roast-origin-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--card-min-width),1fr));gap:var(--card-gap);margin-bottom:24px}
+.roast-origin-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--card-radius);padding:var(--card-padding);transition:all .2s;box-shadow:var(--card-shadow);min-height:var(--card-min-height);display:flex;flex-direction:column}
+.roast-origin-card:hover{border-color:var(--green-2);transform:translateY(-2px);box-shadow:var(--card-shadow-hover)}
+.roast-origin-card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--line);min-height:var(--card-header-min-height)}
+.roast-origin-name{font-family:var(--font-head);font-size:var(--card-title-size);color:var(--heading);font-weight:700;line-height:1.2}
+.roast-stats-row{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:auto;align-items:stretch}
+@media (min-width:900px){.roast-stats-row{grid-template-columns:repeat(4,1fr)}}
+.roast-stat-mini{background:var(--bg);border:1px solid var(--line);border-radius:var(--card-stat-radius);padding:var(--card-stat-padding);text-align:center;display:flex;flex-direction:column;justify-content:center;align-items:center;min-height:var(--card-stat-min-height)}
+.roast-stat-mini-val{font-family:var(--font-num);font-size:var(--card-stat-val-size);font-weight:700;color:var(--heading);line-height:1.05;letter-spacing:-.2px;white-space:nowrap}
+.roast-stat-mini-lbl{font-family:var(--font-body);font-size:var(--card-stat-lbl-size);color:var(--muted);text-transform:uppercase;letter-spacing:.7px;font-weight:600;margin-top:5px;line-height:1.2}
 
-/* ===== WASTED ORIGIN ===== */
-.waste-origin-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;margin-bottom:20px}
-.waste-origin-card{background:var(--panel);border:1px solid rgba(194,77,58,.2);border-radius:12px;padding:18px;transition:all .2s}
-.waste-origin-card:hover{border-color:var(--red);transform:translateY(-2px)}
+/* ===== WASTED ORIGIN — same dimensions, red accent ===== */
+.waste-origin-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--card-min-width),1fr));gap:var(--card-gap);margin-bottom:24px}
+.waste-origin-card{background:var(--panel);border:1px solid rgba(194,77,58,.2);border-radius:var(--card-radius);padding:var(--card-padding);transition:all .2s;box-shadow:var(--card-shadow);min-height:var(--card-min-height);display:flex;flex-direction:column}
+.waste-origin-card:hover{border-color:var(--red);transform:translateY(-2px);box-shadow:var(--card-shadow-hover)}
 
 /* ===== PROGRESS BAR ===== */
 .progress-bar{height:6px;background:var(--tan-track);border-radius:3px;margin-top:6px;overflow:hidden}
@@ -1013,6 +1204,7 @@ body.theme-dark #alert-log-panel{box-shadow:0 16px 48px rgba(0,0,0,.45);}
   <button class="tab" data-page="greenbeans">Receiving</button>
   <button class="tab" data-page="movements">Movements</button>
   <button class="tab" data-page="roasting">Roasting</button>
+  <button class="tab" data-page="production">Production</button>
   <button class="tab" data-page="reports">Reports</button>
   <button class="tab" data-page="settings">Settings</button>
 </nav>
@@ -1143,26 +1335,26 @@ body.theme-dark #alert-log-panel{box-shadow:0 16px 48px rgba(0,0,0,.45);}
     <h3>Log New Delivery</h3>
     <div class="form-row"><div><label>Date Received</label><input type="date" id="gb-date"/></div></div>
 
-    <!-- 1. Bean Name (coffee name) -->
+    <!-- 1. Origin -->
     <div class="form-row">
-      <div><label>1. Coffee / Bean Name</label>
-        <select id="gb-bean-name-sel" onchange="handleBeanNameSel(this.value)">
-          <option value="">— Select Bean Name —</option>
-          <option value="__new__">+ Add New Bean Name</option>
-        </select>
-      </div>
-      <div id="gb-bean-name-new-wrap" style="display:none"><label>New Bean Name</label><input type="text" id="gb-bean-name-new" placeholder="e.g. Yirgacheffe Natural"/></div>
-    </div>
-
-    <!-- 2. Origin -->
-    <div class="form-row">
-      <div><label>2. Origin / Country</label>
+      <div><label>1. Origin / Country</label>
         <select id="gb-origin-sel" onchange="handleOriginSel(this.value)">
           <option value="">— Select Origin —</option>
           <option value="__new__">+ Add New Origin</option>
         </select>
       </div>
       <div id="gb-origin-new-wrap" style="display:none"><label>New Origin Name</label><input type="text" id="gb-origin-new" placeholder="e.g. Ethiopia Guji"/></div>
+    </div>
+
+    <!-- 2. Bean Name (coffee name) -->
+    <div class="form-row">
+      <div><label>2. Coffee / Bean Name</label>
+        <select id="gb-bean-name-sel" onchange="handleBeanNameSel(this.value)">
+          <option value="">— Select Bean Name —</option>
+          <option value="__new__">+ Add New Bean Name</option>
+        </select>
+      </div>
+      <div id="gb-bean-name-new-wrap" style="display:none"><label>New Bean Name</label><input type="text" id="gb-bean-name-new" placeholder="e.g. Yirgacheffe Natural"/></div>
     </div>
 
     <!-- 3. Supplier -->
@@ -1222,7 +1414,11 @@ body.theme-dark #alert-log-panel{box-shadow:0 16px 48px rgba(0,0,0,.45);}
     <h3>Log New Roasting Batch</h3>
     <div class="form-row three">
       <div><label>Roast Date</label><input type="date" id="r-date"/></div>
-      <div><label>Green Beans Source</label><select id="r-source"><option value="">— Select batch —</option></select></div>
+      <div>
+        <label>Green Beans Source</label>
+        <select id="r-source"><option value="">— Select batch —</option></select>
+        <div id="r-source-lock-notice" style="display:none;margin-top:7px;background:rgba(176,142,74,.1);border:1px solid rgba(176,142,74,.35);border-radius:8px;padding:8px 11px;font-size:12px;color:var(--gold-2);line-height:1.5"></div>
+      </div>
       <div><label>Roast Level</label>
         <select id="r-level">
           <!-- populated dynamically from data.roastLevels -->
@@ -1236,7 +1432,7 @@ body.theme-dark #alert-log-panel{box-shadow:0 16px 48px rgba(0,0,0,.45);}
     </div>
     <div class="form-row full"><div><label>Notes</label><textarea id="r-notes" placeholder="Moisture, roast time, color..."></textarea></div></div>
     <div class="btn-row">
-      <button class="btn" onclick="addRoasting()">💾 Save Roasting Batch</button>
+      <button class="btn" id="saveRoastBtn" onclick="addRoasting()">💾 Save Roasting Batch</button>
       <button class="btn btn-secondary" onclick="clearRForm()">Clear</button>
     </div>
   </div>
@@ -1304,7 +1500,7 @@ body.theme-dark #alert-log-panel{box-shadow:0 16px 48px rgba(0,0,0,.45);}
         </select>
       </div>
       <div><label>Source Batch</label>
-        <select id="mv-source"><option value="">— Select green bean batch —</option></select>
+        <select id="mv-source"><option value="">— Select source (raw or variation) —</option></select>
       </div>
     </div>
     <div class="form-row three">
@@ -1353,6 +1549,91 @@ body.theme-dark #alert-log-panel{box-shadow:0 16px 48px rgba(0,0,0,.45);}
   </div>
 </section>
 
+<!-- ===== PRODUCTION (RAW → FINISHED) ===== -->
+<section class="page" id="page-production">
+  <h2 class="section-title">Production &mdash; Raw to Finished</h2>
+  <p class="text-muted small" style="margin-bottom:14px">
+    A <strong>production run</strong> transforms raw green beans into a finished product (flavoured, infused, or processed).
+    The kg you produce are <strong>subtracted from the raw batch</strong> and <strong>added to the finished product's stock</strong>.
+    Total kilograms are conserved &mdash; nothing is duplicated.
+  </p>
+
+  <div class="panel">
+    <h3>Run a Production Batch</h3>
+    <div class="form-row three">
+      <div><label>Production Date</label><input type="date" id="pd-date"/></div>
+      <div>
+        <label>Raw Source (Green Bean Batch)</label>
+        <select id="pd-source"><option value="">— Select raw batch —</option></select>
+        <div id="pd-source-info" class="text-muted small" style="margin-top:6px;min-height:18px"></div>
+      </div>
+      <div>
+        <label>Finished Product</label>
+        <select id="pd-product-sel" onchange="handlePdProductSel(this.value)">
+          <option value="">— Select or add product —</option>
+          <option value="__new__">+ Add New Finished Product</option>
+        </select>
+        <div id="pd-product-new-wrap" style="display:none;margin-top:8px">
+          <input type="text" id="pd-product-new" placeholder="e.g. Colombia Blueberry" autocomplete="off"/>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-row three">
+      <div>
+        <label>Quantity to Produce (kg)</label>
+        <input type="number" id="pd-kg" placeholder="e.g. 50" min="0" step="0.1" oninput="updatePdHint()"/>
+      </div>
+      <div>
+        <label>Raw Available</label>
+        <input type="text" id="pd-available" readonly placeholder="—" style="background:rgba(176,142,74,.06);font-weight:600"/>
+      </div>
+      <div>
+        <label>Raw Remaining After</label>
+        <input type="text" id="pd-after" readonly placeholder="—" style="background:rgba(176,142,74,.06);font-weight:600"/>
+      </div>
+    </div>
+
+    <!-- Visual preview of the transformation -->
+    <div id="pd-flow-preview" class="calc-display" style="margin-top:14px;display:none">
+      <div class="calc-cell">
+        <div class="calc-cell-label">Raw In</div>
+        <div class="calc-cell-value" id="pd-flow-raw">—</div>
+      </div>
+      <div class="calc-arrow">→</div>
+      <div class="calc-cell out">
+        <div class="calc-cell-label">Finished Out</div>
+        <div class="calc-cell-value" id="pd-flow-finished">—</div>
+      </div>
+    </div>
+
+    <div class="form-row full">
+      <div>
+        <label>Notes (optional)</label>
+        <textarea id="pd-notes" placeholder="Process details, infusion method, batch tag..."></textarea>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn" onclick="addProduction()">💾 Run Production</button>
+      <button class="btn btn-secondary" onclick="clearPdForm()">Clear</button>
+    </div>
+  </div>
+
+  <!-- Finished Product Inventory -->
+  <h2 class="section-title">Finished Product Inventory</h2>
+  <p class="text-muted small" style="margin-bottom:14px">
+    Live stock balances for every finished product. Each card shows the current remaining quantity, total ever produced, and the raw batches it was made from.
+  </p>
+  <div id="finishedProductsBlock"></div>
+
+  <!-- Production Log -->
+  <h2 class="section-title" style="margin-top:30px">Production Log</h2>
+  <p class="text-muted small" style="margin-bottom:14px">
+    Audit trail of every production run. Removing a record <strong>restores raw kg</strong> and <strong>deducts finished kg</strong>. Deletion is blocked if it would push finished stock negative.
+  </p>
+  <div id="productionSections"></div>
+</section>
+
 <!-- ===== REPORTS & EXPORT ===== -->
 <section class="page" id="page-reports">
   <h2 class="section-title">Reports &amp; Export</h2>
@@ -1390,9 +1671,17 @@ body.theme-dark #alert-log-panel{box-shadow:0 16px 48px rgba(0,0,0,.45);}
     <div class="panel">
       <h3>Daily Roasting Report</h3>
       <div class="table-wrap">
-        <table>
-          <thead><tr><th>Date</th><th>Batches</th><th>Green In</th><th>Roasted Out</th><th>Wastage</th><th>Avg Waste%</th></tr></thead>
+        <table class="report-table">
+          <thead><tr>
+            <th class="col-period">Date</th>
+            <th class="num">Batches</th>
+            <th class="num">Green In</th>
+            <th class="num">Roasted Out</th>
+            <th class="num">Wastage</th>
+            <th class="col-avg">Avg Waste%</th>
+          </tr></thead>
           <tbody id="dailyReport"></tbody>
+          <tfoot id="dailyReportFoot"></tfoot>
         </table>
       </div>
     </div>
@@ -1423,9 +1712,17 @@ body.theme-dark #alert-log-panel{box-shadow:0 16px 48px rgba(0,0,0,.45);}
     <div class="panel">
       <h3>Weekly Roasting Report</h3>
       <div class="table-wrap">
-        <table>
-          <thead><tr><th>Week</th><th>Batches</th><th>Green In</th><th>Roasted Out</th><th>Wastage</th><th>Avg Waste%</th></tr></thead>
+        <table class="report-table">
+          <thead><tr>
+            <th class="col-period">Week</th>
+            <th class="num">Batches</th>
+            <th class="num">Green In</th>
+            <th class="num">Roasted Out</th>
+            <th class="num">Wastage</th>
+            <th class="col-avg">Avg Waste%</th>
+          </tr></thead>
           <tbody id="weeklyReport"></tbody>
+          <tfoot id="weeklyReportFoot"></tfoot>
         </table>
       </div>
     </div>
@@ -1436,9 +1733,17 @@ body.theme-dark #alert-log-panel{box-shadow:0 16px 48px rgba(0,0,0,.45);}
     <div class="panel">
       <h3>Monthly Roasting Report</h3>
       <div class="table-wrap">
-        <table>
-          <thead><tr><th>Month</th><th>Batches</th><th>Green In</th><th>Roasted Out</th><th>Wastage</th><th>Avg Waste%</th></tr></thead>
+        <table class="report-table">
+          <thead><tr>
+            <th class="col-period">Month</th>
+            <th class="num">Batches</th>
+            <th class="num">Green In</th>
+            <th class="num">Roasted Out</th>
+            <th class="num">Wastage</th>
+            <th class="col-avg">Avg Waste%</th>
+          </tr></thead>
           <tbody id="monthlyReport"></tbody>
+          <tfoot id="monthlyReportFoot"></tfoot>
         </table>
       </div>
     </div>
@@ -1549,6 +1854,26 @@ body.theme-dark #alert-log-panel{box-shadow:0 16px 48px rgba(0,0,0,.45);}
       <button class="btn btn-sm" onclick="applyCustomPreset()">✓ Apply Custom Colors</button>
       <button class="btn btn-sm btn-secondary" onclick="resetCustomColors()">↺ Reset</button>
     </div>
+  </div>
+
+  <!-- DEFAULT ROASTING STORE — Rule A -->
+  <div class="settings-section" id="defaultRoastStoreSection">
+    <h3>🏭 Default Roasting Store</h3>
+    <div class="alert warn" style="margin-bottom:16px">
+      <span>⚙️ <strong>Roasting Lock Setting.</strong> When a Default Roasting Store is selected, the Roasting Log will only show batches from that store. Beans from other stores must be transferred here first before they can be roasted.</span>
+    </div>
+    <div class="form-row" style="align-items:flex-end">
+      <div>
+        <label>Default Roasting Store</label>
+        <select id="defaultRoastingStoreSelect">
+          <option value="">— No lock (any store) —</option>
+        </select>
+      </div>
+      <div>
+        <button class="btn" onclick="saveDefaultRoastingStore()">💾 Save Setting</button>
+      </div>
+    </div>
+    <p class="text-muted small" style="margin-top:10px" id="defaultRoastStoreStatus"></p>
   </div>
 
   <!-- STORES MANAGEMENT -->
@@ -1909,11 +2234,12 @@ function changeUsername(){
 /* ===== DATA ===== */
 const KEY='windmillRoastery_v9';
 const defaultData={
-  greenBeans:[],roasting:[],movements:[],
+  greenBeans:[],roasting:[],movements:[],productions:[],finishedProducts:[],
   stores:[{id:'s1',name:'Store 1',location:'Branch 1',safetyStock:10},{id:'s2',name:'Store 2',location:'Branch 2',safetyStock:10}],
   lowThreshold:5,
   knownOrigins:[],knownSuppliers:[],knownBeanNames:[],
   roastLevels:['Light','Medium-Light','Medium','Medium-Dark','Dark','Espresso'],
+  defaultRoastingStoreId:'',  // Rule A: locked roasting store
   prefs:{theme:'cream',fontNum:"'Playfair Display',serif",fontBody:"'Inter',sans-serif",fontScale:'1',role:'Storekeeper',accent:'coffee',customColors:null}
 };
 
@@ -1943,6 +2269,10 @@ function mergeData(p){
   if(p.stores)p.stores=p.stores.map(s=>{const{stock,...rest}=s;return rest;});
   const merged=Object.assign(JSON.parse(JSON.stringify(defaultData)),p);
   if(!merged.roastLevels||!merged.roastLevels.length)merged.roastLevels=[...defaultData.roastLevels];
+  // Always restore from dedicated localStorage key so Firebase sync never wipes it
+  var _drsLs='';try{_drsLs=localStorage.getItem('windmill_defaultRoastStoreId')||'';}catch(e){}
+  if(_drsLs)merged.defaultRoastingStoreId=_drsLs;
+  else if(merged.defaultRoastingStoreId===undefined)merged.defaultRoastingStoreId='';
   if(!merged.prefs)merged.prefs={...defaultData.prefs};
   else merged.prefs=Object.assign({...defaultData.prefs},merged.prefs);
   if(!merged.knownOrigins||merged.knownOrigins.length===0)
@@ -1951,6 +2281,26 @@ function mergeData(p){
     merged.knownSuppliers=[...new Set(merged.greenBeans.map(g=>g.supplier).filter(Boolean))];
   if(!merged.knownBeanNames)
     merged.knownBeanNames=[...new Set(merged.greenBeans.map(g=>g.beanName).filter(Boolean))];
+
+  // ─── Backfill storeId on finished products from older saves ─────────
+  // Earlier versions stored finished products without a storeId. Look at
+  // the matching production records to figure out which store each one
+  // belonged to. If we can't tell, leave storeId blank (renders under
+  // "Unassigned" until the user fixes it).
+  if(Array.isArray(merged.finishedProducts) && Array.isArray(merged.productions)){
+    merged.finishedProducts.forEach(fp=>{
+      if(fp.storeId) return;
+      const rec = merged.productions.find(p=>
+        (p.finishedProductId===fp.id) ||
+        (String(p.productName||'').trim().toLowerCase()===String(fp.name||'').trim().toLowerCase())
+      );
+      if(rec){
+        fp.storeId   = rec.storeId   || '';
+        fp.storeName = rec.storeName || fp.storeName || '—';
+      }
+    });
+  }
+
   return merged;
 }
 
@@ -1976,6 +2326,7 @@ let _fbListenerAttached = false;
 function attachFirebaseListener(){
   if(_fbListenerAttached)return;
   _fbListenerAttached = true;
+  if(!db){ setSyncStatus('offline','LOCAL'); return; }
   setSyncStatus('syncing','SYNCING');
   db.ref(FB_PATH).on('value', snapshot => {
     const fbData = snapshot.val();
@@ -2031,6 +2382,7 @@ function saveData(){
 
   /* Debounce Firebase writes by 600 ms to batch rapid changes */
   clearTimeout(_saveTimer);
+  if(!db){ setSyncStatus('offline','LOCAL'); return; }
   setSyncStatus('syncing','SAVING');
   _saveTimer = setTimeout(()=>{
     db.ref(FB_PATH).set(JSON.parse(JSON.stringify(data)))
@@ -2521,18 +2873,75 @@ function _doEditGreenBean(id){
   document.getElementById('editModal').classList.add('show');
 }
 
+function refreshRoastingSourceDropdown(){
+  var sel=document.getElementById('r-source');
+  if(!sel)return;
+  var cur=sel.value;
+  // Read from dedicated localStorage key first (survives Firebase sync overwrites)
+  var _lsVal='';try{_lsVal=localStorage.getItem('windmill_defaultRoastStoreId')||'';}catch(e){}
+  var drsId=_lsVal||data.defaultRoastingStoreId||'';
+  if(drsId&&data.defaultRoastingStoreId!==drsId)data.defaultRoastingStoreId=drsId;
+  var drsStore=drsId?data.stores.find(function(s){return s.id===drsId;}):null;
+  var lockNotice=document.getElementById('r-source-lock-notice');
+  var saveRoastBtn=document.getElementById('saveRoastBtn');
+  if(drsId&&drsStore){
+    var eligible=data.greenBeans.filter(function(g){return g.remaining>0&&g.storeId===drsId;});
+    var eligibleVariations=(data.finishedProducts||[]).filter(function(p){return p.remaining>0&&p.storeId===drsId;});
+    var opts='<option value="">-- Select batch from '+escapeHtml(drsStore.name)+' --</option>';
+    if(eligible.length){
+      opts+='<optgroup label="🌿 Raw Green Beans">';
+      eligible.forEach(function(g){
+        opts+='<option value="'+g.id+'">'+escapeHtml(g.origin)+(g.beanName?' - '+escapeHtml(g.beanName):'')+' ('+fmt(g.remaining)+' kg)</option>';
+      });
+      opts+='</optgroup>';
+    }
+    if(eligibleVariations.length){
+      opts+='<optgroup label="☕ Variations">';
+      eligibleVariations.forEach(function(p){
+        opts+='<option value="var:'+p.id+'">'+escapeHtml(p.name)+' ('+fmt(p.remaining)+' kg)</option>';
+      });
+      opts+='</optgroup>';
+    }
+    sel.innerHTML=opts;
+    var allIds=eligible.map(function(g){return g.id;}).concat(eligibleVariations.map(function(p){return 'var:'+p.id;}));
+    if(cur&&allIds.indexOf(cur)>=0)sel.value=cur;
+    sel.disabled=false;
+    if(lockNotice){
+      lockNotice.style.display='block';
+      lockNotice.style.background='rgba(107,160,90,.1)';
+      lockNotice.style.border='1px solid rgba(107,160,90,.35)';
+      lockNotice.style.color='var(--green-2)';
+      lockNotice.innerHTML='Roasting Store LOCKED: <strong>'+escapeHtml(drsStore.name)+'</strong> - Showing raw green beans and variations from this store.';
+    }
+    if(saveRoastBtn)saveRoastBtn.disabled=false;
+  }else{
+    sel.innerHTML='<option value="">No Default Roasting Store set - go to Settings</option>';
+    sel.disabled=true;
+    if(lockNotice){
+      lockNotice.style.display='block';
+      lockNotice.style.background='rgba(194,77,58,.08)';
+      lockNotice.style.border='1px solid rgba(194,77,58,.35)';
+      lockNotice.style.color='var(--red)';
+      lockNotice.innerHTML='No Default Roasting Store configured. Go to Settings and select a Default Roasting Store first.';
+    }
+    if(saveRoastBtn)saveRoastBtn.disabled=true;
+  }
+}
+
 function renderGreenBeans(){
   populateGBStoreDropdown();
   refreshOriginDropdown();
   refreshSupplierDropdown();
-  // populate roasting source dropdown
-  const sel=document.getElementById('r-source');
-  const cur=sel.value;
-  sel.innerHTML='<option value="">— Select batch —</option>'+
-    data.greenBeans.filter(g=>g.remaining>0).map(g=>
-      `<option value="${g.id}">${getOriginEmoji(g.origin)} ${escapeHtml(g.origin)}${g.beanName?' – '+escapeHtml(g.beanName):''} [${escapeHtml(g.storeName||'?')}] (${fmt(g.remaining)} kg)</option>`
-    ).join('');
-  sel.value=cur;
+  refreshRoastingSourceDropdown();
+
+  // Pre-build per-batch production breakdown so we can show variation
+  // children inline with each Cauca/etc. batch row.
+  const productionsByBatch={};
+  (data.productions||[]).forEach(p=>{
+    const k=p.sourceId||'';
+    if(!productionsByBatch[k])productionsByBatch[k]={};
+    productionsByBatch[k][p.productName]=(productionsByBatch[k][p.productName]||0)+p.kg;
+  });
 
   // Group by origin
   const container=document.getElementById('gbOriginSections');
@@ -2545,21 +2954,29 @@ function renderGreenBeans(){
     if(!byOrigin[g.origin])byOrigin[g.origin]=[];
     byOrigin[g.origin].push(g);
   });
-  const total=data.greenBeans.reduce((s,g)=>s+g.remaining,0);
   container.innerHTML=Object.entries(byOrigin).sort((a,b)=>{
-    const ra=a[1].reduce((s,g)=>s+g.remaining,0);
-    const rb=b[1].reduce((s,g)=>s+g.remaining,0);
+    const ra=a[1].reduce((s,g)=>s+g.kg,0);  // sort by total stock owned, not just raw
+    const rb=b[1].reduce((s,g)=>s+g.kg,0);
     return rb-ra;
   }).map(([origin,beans])=>{
-    const totalRem=beans.reduce((s,g)=>s+g.remaining,0);
-    const totalRec=beans.filter(g=>!g.isTransfer).reduce((s,g)=>s+g.kg,0);
+    // Origin-level totals: total stock = full kg of every batch (received).
+    // The Cauca's "balance" is its received kg even after some became Blueberry —
+    // the Blueberry is still Cauca-stock, just transformed.
+    const totalStock=beans.filter(g=>!g.isTransfer).reduce((s,g)=>s+g.kg,0);
+    const totalRaw  =beans.reduce((s,g)=>s+g.remaining,0);
+    const totalVariations = beans.reduce((s,g)=>{
+      const p=productionsByBatch[g.id]||{};
+      return s + Object.values(p).reduce((a,b)=>a+b,0);
+    }, 0);
     const suppliers=[...new Set(beans.map(g=>g.supplier))];
+
     return `<div class="origin-section">
       <div class="origin-section-header">
         <div class="origin-section-title">${getOriginEmoji(origin)} ${escapeHtml(origin)}</div>
         <div class="origin-kpis">
-          <div class="origin-kpi-chip"><div class="origin-kpi-chip-val text-gold">${fmt(totalRem)} kg</div><div class="origin-kpi-chip-lbl">Remaining</div></div>
-          <div class="origin-kpi-chip"><div class="origin-kpi-chip-val">${fmt(totalRec)} kg</div><div class="origin-kpi-chip-lbl">Total Received</div></div>
+          <div class="origin-kpi-chip"><div class="origin-kpi-chip-val text-gold">${fmt(totalStock)} kg</div><div class="origin-kpi-chip-lbl">Total Stock</div></div>
+          <div class="origin-kpi-chip"><div class="origin-kpi-chip-val">${fmt(totalRaw)} kg</div><div class="origin-kpi-chip-lbl">Still Raw</div></div>
+          <div class="origin-kpi-chip"><div class="origin-kpi-chip-val">${fmt(totalVariations)} kg</div><div class="origin-kpi-chip-lbl">As Variations</div></div>
           <div class="origin-kpi-chip"><div class="origin-kpi-chip-val">${beans.length}</div><div class="origin-kpi-chip-lbl">Batches</div></div>
         </div>
       </div>
@@ -2567,9 +2984,18 @@ function renderGreenBeans(){
         <p class="text-muted small" style="margin-bottom:12px">Suppliers: ${suppliers.map(s=>`<span class="badge blue">${escapeHtml(s)}</span>`).join(' ')}</p>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Date</th><th>Bean Name</th><th>Supplier</th><th>Store / Route</th><th>Received</th><th>Remaining</th><th>Batch</th><th>Actions</th></tr></thead>
-            <tbody>${beans.map(g=>`
-              <tr>
+            <thead><tr><th>Date</th><th>Bean Name</th><th>Supplier</th><th>Store / Route</th><th>Batch Stock</th><th>Breakdown</th><th>Batch Tag</th><th>Actions</th></tr></thead>
+            <tbody>${beans.map(g=>{
+              const prods=productionsByBatch[g.id]||{};
+              const producedKg=Object.values(prods).reduce((a,b)=>a+b,0);
+              const breakdownChips=[];
+              breakdownChips.push(`<span class="badge ${g.remaining<=0?'red':g.remaining<g.kg*0.2?'gold':'green'}" style="white-space:nowrap">🌿 Raw ${fmt(g.remaining)} kg</span>`);
+              Object.entries(prods).sort((a,b)=>b[1]-a[1]).forEach(([name,kg])=>{
+                breakdownChips.push(`<span class="badge gold" style="white-space:nowrap">☕ ${escapeHtml(name)} ${fmt(kg)} kg</span>`);
+              });
+              const drift = Math.abs(g.kg - (g.remaining + producedKg));
+              if(drift>0.01) breakdownChips.push(`<span class="badge red" style="white-space:nowrap">drift ${fmt(drift)} kg</span>`);
+              return `<tr>
                 <td>${formatDate(g.date)}</td>
                 <td>${g.beanName?`<strong>${escapeHtml(g.beanName)}</strong>`:'<span class="text-muted">—</span>'}</td>
                 <td>${escapeHtml(g.supplier)}</td>
@@ -2577,14 +3003,15 @@ function renderGreenBeans(){
                   ?`<span class="badge teal" style="font-size:10px">↔ Transfer</span><br><span class="text-muted small" style="white-space:nowrap">${escapeHtml(g.fromStoreName||'?')} → ${escapeHtml(g.storeName||'?')}</span>`
                   :`<span class="badge blue">${escapeHtml(g.storeName||'—')}</span>`
                 }</td>
-                <td>${fmt(g.kg)} kg</td>
-                <td><span class="badge ${g.remaining<=0?'red':g.remaining<g.kg*0.2?'gold':'green'}">${fmt(g.remaining)} kg</span></td>
+                <td><strong class="text-gold">${fmt(g.kg)} kg</strong></td>
+                <td><div style="display:flex;flex-wrap:wrap;gap:4px">${breakdownChips.join('')}</div></td>
                 <td class="text-muted small">${escapeHtml(g.batch||'—')}</td>
                 <td><div style="display:flex;gap:6px">
                   <button class="btn btn-xs btn-secondary" onclick="editGreenBean('${g.id}')">Edit</button>
                   <button class="btn btn-xs btn-danger" onclick="deleteGreenBean('${g.id}')">Remove</button>
                 </div></td>
-              </tr>`).join('')}
+              </tr>`;
+            }).join('')}
             </tbody>
           </table>
         </div>
@@ -2619,21 +3046,72 @@ function autoCalcWaste(){
 /* ===== ROASTING ===== */
 function addRoasting(){
   const date=document.getElementById('r-date').value||todayISO();
-  const sourceId=document.getElementById('r-source').value;
+  const rawSourceId=document.getElementById('r-source').value;
   const level=document.getElementById('r-level').value;
   const inKg=parseFloat(document.getElementById('r-in').value);
   const outKg=parseFloat(document.getElementById('r-out').value);
   const notes=document.getElementById('r-notes').value.trim();
-  if(!sourceId){toast('Select a green bean batch','error');return;}
+  if(!rawSourceId){toast('Select a green bean batch','error');return;}
   if(!inKg||inKg<=0){toast('Enter green beans in (kg)','error');return;}
   if(isNaN(outKg)||outKg<0){toast('Enter roasted output (kg)','error');return;}
   if(outKg>inKg){toast('Output cannot exceed input','error');return;}
-  const source=data.greenBeans.find(g=>g.id===sourceId);
+
+  const _drsId=data.defaultRoastingStoreId||'';
+  if(!_drsId){
+    toast('⛔ No Default Roasting Store set. Go to Settings → 🏭 Default Roasting Store first.','error');
+    return;
+  }
+  const _drsStore=data.stores.find(s=>s.id===_drsId);
+
+  // ── Branch: VARIATION source (option value is "var:<finishedProductId>") ──
+  if(rawSourceId.indexOf('var:')===0){
+    const fpId=rawSourceId.slice(4);
+    const fp=data.finishedProducts.find(p=>p.id===fpId);
+    if(!fp){toast('Variation not found','error');return;}
+    if(fp.remaining<inKg){toast(`Only ${fmt(fp.remaining)} kg of ${fp.name} available`,'error');return;}
+    if((fp.storeId||'')!==_drsId){
+      toast('⛔ This variation is in '+(fp.storeName||'another store')+', not the Roasting Store ('+(_drsStore?_drsStore.name:'?')+').','error');
+      return;
+    }
+    // Trace the variation back to its primary raw origin (for grouping/reports)
+    let primaryOrigin=fp.name;
+    let primaryBeanName='';
+    const sources={};
+    (data.productions||[]).forEach(pr=>{
+      if(pr.finishedProductId===fp.id) sources[pr.sourceOrigin||'?']=(sources[pr.sourceOrigin||'?']||0)+pr.kg;
+    });
+    const top=Object.entries(sources).sort((a,b)=>b[1]-a[1])[0];
+    if(top) primaryOrigin=top[0];
+
+    const wasteKg=inKg-outKg,wastePct=(wasteKg/inKg)*100;
+    data.roasting.unshift({
+      id:uid(),date,
+      sourceId:'',                          // raw batch id is empty for variation roasts
+      sourceVariationId:fp.id,              // marker so we can identify these
+      sourceName:`${primaryOrigin} – ${fp.name} (variation)`,
+      sourceOrigin:primaryOrigin,
+      sourceBeanName:fp.name,
+      storeId:fp.storeId||'',
+      storeName:fp.storeName||'—',
+      level,inKg,outKg,wasteKg,wastePct,notes,available:outKg
+    });
+    fp.remaining-=inKg;
+    saveData();clearRForm();renderAll();
+    toast(`Roasted ${fmt(outKg)} kg from ${fp.name} (variation), ${fmt(wasteKg)} kg waste`);
+    return;
+  }
+
+  // ── Branch: RAW green bean source ──
+  const source=data.greenBeans.find(g=>g.id===rawSourceId);
   if(!source){toast('Source batch not found','error');return;}
   if(source.remaining<inKg){toast(`Only ${fmt(source.remaining)} kg available in this batch`,'error');return;}
+  if(source.storeId!==_drsId){
+    toast('⛔ This batch is in '+( source.storeName||'another store')+', not the Roasting Store ('+((_drsStore?_drsStore.name:'?'))+')  Transfer the beans via Stock Movements first.','error');
+    return;
+  }
   const wasteKg=inKg-outKg,wastePct=(wasteKg/inKg)*100;
   data.roasting.unshift({
-    id:uid(),date,sourceId,
+    id:uid(),date,sourceId:rawSourceId,
     sourceName:`${source.origin}${source.beanName?' – '+source.beanName:''} (${source.supplier})`,
     sourceOrigin:source.origin,sourceBeanName:source.beanName||'',storeId:source.storeId,storeName:source.storeName||'—',
     level,inKg,outKg,wasteKg,wastePct,notes,available:outKg
@@ -2649,13 +3127,467 @@ function clearRForm(){
 }
 function deleteRoasting(id){
   const r=data.roasting.find(x=>x.id===id);
-  const detail=r?`Remove roasting batch: ${escapeHtml(r.sourceOrigin||'?')} — ${fmt(r.inKg)} kg in, ${fmt(r.outKg)} kg out. Green beans will be restored.`:'Delete this roasting record?';
+  let detail='Delete this roasting record?';
+  if(r){
+    if(r.sourceVariationId){
+      detail=`Remove roasting batch: ${escapeHtml(r.sourceBeanName||r.sourceOrigin||'variation')} — ${fmt(r.inKg)} kg in, ${fmt(r.outKg)} kg out. Variation kg will be restored.`;
+    }else{
+      detail=`Remove roasting batch: ${escapeHtml(r.sourceOrigin||'?')} — ${fmt(r.inKg)} kg in, ${fmt(r.outKg)} kg out. Green beans will be restored.`;
+    }
+  }
   requirePassword('Delete Roasting Record', detail, ()=>{
     const rec=data.roasting.find(x=>x.id===id);
-    if(rec){const src=data.greenBeans.find(g=>g.id===rec.sourceId);if(src)src.remaining+=rec.inKg;}
+    if(rec){
+      if(rec.sourceVariationId){
+        const fp=data.finishedProducts.find(p=>p.id===rec.sourceVariationId);
+        if(fp) fp.remaining+=rec.inKg;
+      }else{
+        const src=data.greenBeans.find(g=>g.id===rec.sourceId);
+        if(src) src.remaining+=rec.inKg;
+      }
+    }
     data.roasting=data.roasting.filter(x=>x.id!==id);
-    saveData();renderAll();toast('Roasting record deleted, green beans restored');
+    saveData();renderAll();
+    toast(rec&&rec.sourceVariationId?'Roasting deleted, variation kg restored':'Roasting record deleted, green beans restored');
   });
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   PRODUCTION SYSTEM — RAW → FINISHED TRANSFORMATION
+   ────────────────────────────────────────────────────────────────────
+   Two stock pools:
+     • RAW       → data.greenBeans   (each batch has .remaining)
+     • FINISHED  → data.finishedProducts
+                   each item: { id, name, totalProduced, remaining,
+                                createdAt, lastProducedAt }
+
+   A "production run" is a single transformation event:
+     - subtracts X kg from a chosen raw batch (greenBeans[i].remaining)
+     - adds X kg to a finished product's `remaining` and `totalProduced`
+     - logs an audit record in data.productions[]
+
+   Rules enforced:
+     1. Raw and finished are separate stock pools.
+     2. kg conservation — every production both subtracts (raw) and
+        adds (finished) the same X kg.
+     3. Finished stock can only be created from a raw batch (no manual
+        add-finished function exposed).
+     4. Cannot produce more than the raw batch's remaining kg.
+     5. Deleting a production record reverses both sides — restores
+        raw kg and removes finished kg. Blocked if finished `remaining`
+        would go negative (i.e. some of that finished stock was already
+        drawn down by another mechanism).
+═══════════════════════════════════════════════════════════════════ */
+
+/* ---------- Finished-product helpers ---------- */
+
+/* Find a finished product by case-insensitive name AND storeId.
+   Two products with the same name in different stores are separate entries. */
+function findFinishedByNameAndStore(name, storeId){
+  const n=String(name||'').trim().toLowerCase();
+  if(!n)return null;
+  return data.finishedProducts.find(p=>
+    String(p.name||'').trim().toLowerCase()===n &&
+    (p.storeId||'')===(storeId||'')
+  )||null;
+}
+
+/* Legacy lookup used in older code paths and during reverse-of-legacy-records. */
+function findFinishedByName(name){
+  const n=String(name||'').trim().toLowerCase();
+  if(!n)return null;
+  return data.finishedProducts.find(p=>String(p.name||'').trim().toLowerCase()===n)||null;
+}
+
+/* Get-or-create a finished product scoped to a specific store.
+   If a same-named product exists in a DIFFERENT store, we leave it
+   alone and create a separate entry for THIS store. */
+function getOrCreateFinished(name, storeId, storeName){
+  const trimmed=String(name||'').trim();
+  if(!trimmed)return null;
+  let prod=findFinishedByNameAndStore(trimmed, storeId);
+  if(!prod){
+    prod={
+      id:uid(),
+      name:trimmed,
+      storeId:storeId||'',
+      storeName:storeName||'—',
+      totalProduced:0,
+      remaining:0,
+      createdAt:new Date().toISOString(),
+      lastProducedAt:null
+    };
+    data.finishedProducts.unshift(prod);
+  }
+  return prod;
+}
+
+/* ---------- Form dropdowns ---------- */
+
+/* Refresh the raw-source dropdown — only batches with remaining > 0 */
+function refreshProductionSourceDropdown(){
+  const sel=document.getElementById('pd-source');
+  if(!sel)return;
+  const prev=sel.value;
+  const eligible=data.greenBeans.filter(g=>g.remaining>0);
+  sel.innerHTML='<option value="">— Select raw batch —</option>'+
+    eligible.map(g=>{
+      const label=`${g.origin}${g.beanName?' – '+g.beanName:''} • ${fmt(g.remaining)} kg left${g.batch?' • '+g.batch:''}`;
+      return `<option value="${g.id}">${escapeHtml(label)}</option>`;
+    }).join('');
+  if(prev&&eligible.some(g=>g.id===prev))sel.value=prev;
+}
+
+/* Refresh the finished-product dropdown.
+   Shows existing products with their store + remaining; "Add New" creates
+   a product in the same store as the raw batch currently selected. */
+function refreshFinishedProductDropdown(){
+  const sel=document.getElementById('pd-product-sel');
+  if(!sel)return;
+  const prev=sel.value;
+  const opts=data.finishedProducts.slice().sort((a,b)=>{
+    return (a.storeName||'').localeCompare(b.storeName||'')
+        || a.name.localeCompare(b.name);
+  });
+  sel.innerHTML='<option value="">— Select or add product —</option>'+
+    opts.map(p=>{
+      const store=p.storeName||'—';
+      return `<option value="${p.id}">${escapeHtml(p.name)} @ ${escapeHtml(store)} (${fmt(p.remaining)} kg)</option>`;
+    }).join('')+
+    '<option value="__new__">+ Add New Finished Product</option>';
+  if(prev&&(prev==='__new__'||opts.some(p=>p.id===prev)))sel.value=prev;
+  const wrap=document.getElementById('pd-product-new-wrap');
+  if(wrap)wrap.style.display=(sel.value==='__new__')?'block':'none';
+}
+
+/* Toggle visibility of the "new product name" input */
+function handlePdProductSel(val){
+  const wrap=document.getElementById('pd-product-new-wrap');
+  if(wrap)wrap.style.display=(val==='__new__')?'block':'none';
+  if(val==='__new__'){
+    const inp=document.getElementById('pd-product-new');
+    if(inp)setTimeout(()=>inp.focus(),0);
+  }
+  updatePdHint();
+}
+
+/* ---------- Live preview ---------- */
+
+function updatePdHint(){
+  const srcSel=document.getElementById('pd-source');
+  const kgIn  =document.getElementById('pd-kg');
+  const avail =document.getElementById('pd-available');
+  const after =document.getElementById('pd-after');
+  const info  =document.getElementById('pd-source-info');
+  const flow  =document.getElementById('pd-flow-preview');
+  const flowR =document.getElementById('pd-flow-raw');
+  const flowF =document.getElementById('pd-flow-finished');
+  if(!srcSel||!kgIn||!avail||!after)return;
+
+  const src=data.greenBeans.find(g=>g.id===srcSel.value);
+  if(!src){
+    avail.value='';after.value='';
+    if(info)info.textContent='';
+    if(flow)flow.style.display='none';
+    return;
+  }
+  avail.value=fmt(src.remaining)+' kg';
+  if(info){
+    info.innerHTML=`Raw: <strong>${escapeHtml(src.origin)}</strong>${src.beanName?' – '+escapeHtml(src.beanName):''} • Supplier: ${escapeHtml(src.supplier||'—')} • Store: ${escapeHtml(src.storeName||'—')}`;
+  }
+  const q=parseFloat(kgIn.value);
+  if(isNaN(q)||q<=0){
+    after.value=fmt(src.remaining)+' kg';
+    after.style.color='';
+    if(flow)flow.style.display='none';
+    return;
+  }
+  const remaining=src.remaining-q;
+  after.value=fmt(remaining)+' kg';
+  after.style.color=remaining<0?'var(--danger,#c0392b)':(remaining===0?'var(--gold)':'');
+
+  // Show the raw → finished flow preview
+  if(flow&&flowR&&flowF){
+    flow.style.display='';
+    flowR.textContent='-'+fmt(q)+' kg';
+    flowF.textContent='+'+fmt(q)+' kg';
+  }
+}
+
+/* ---------- The transformation ---------- */
+
+function addProduction(){
+  const date  =document.getElementById('pd-date').value||todayISO();
+  const srcId =document.getElementById('pd-source').value;
+  const prodSel=document.getElementById('pd-product-sel').value;
+  const newName=(document.getElementById('pd-product-new').value||'').trim();
+  const kg    =parseFloat(document.getElementById('pd-kg').value);
+  const notes =document.getElementById('pd-notes').value.trim();
+
+  // ── Validation ──
+  if(!srcId){toast('Select a raw green bean batch','error');return;}
+  if(!prodSel){toast('Select a finished product (or add a new one)','error');return;}
+  if(prodSel==='__new__'&&!newName){toast('Enter the new finished product name','error');return;}
+  if(!kg||kg<=0){toast('Enter a quantity greater than 0','error');return;}
+
+  const source=data.greenBeans.find(g=>g.id===srcId);
+  if(!source){toast('Source batch not found','error');return;}
+
+  // Rule 4: cannot produce more than raw available
+  if(kg>source.remaining){
+    toast(`Only ${fmt(source.remaining)} kg available in this raw batch — cannot produce ${fmt(kg)} kg`,'error');
+    return;
+  }
+
+  // Resolve target finished product — scoped to the SOURCE BATCH's store.
+  // Finished products live in the same store as the raw batch they came from.
+  const sourceStoreId   = source.storeId   || '';
+  const sourceStoreName = source.storeName || '—';
+
+  let prod;
+  if(prodSel==='__new__'){
+    // Avoid duplicate when typed name already exists in this same store
+    prod = findFinishedByNameAndStore(newName, sourceStoreId)
+        || getOrCreateFinished(newName, sourceStoreId, sourceStoreName);
+  }else{
+    prod=data.finishedProducts.find(p=>p.id===prodSel);
+    if(!prod){toast('Finished product not found','error');return;}
+    // Guard: existing product must be in the same store as the raw batch.
+    // If a user picks "Blueberry @ Store 2" but the raw batch is in Vila 27,
+    // we redirect to (or create) "Blueberry @ Vila 27" instead.
+    if((prod.storeId||'') !== sourceStoreId){
+      prod = findFinishedByNameAndStore(prod.name, sourceStoreId)
+          || getOrCreateFinished(prod.name, sourceStoreId, sourceStoreName);
+    }
+  }
+
+  // ── Atomic transformation: subtract raw, add finished ──
+  source.remaining -= kg;
+  prod.remaining   += kg;
+  prod.totalProduced += kg;
+  prod.lastProducedAt = new Date().toISOString();
+
+  // ── Audit log entry ──
+  data.productions.unshift({
+    id:uid(),
+    date,
+    sourceId:srcId,
+    sourceOrigin:source.origin,
+    sourceBeanName:source.beanName||'',
+    sourceSupplier:source.supplier||'',
+    sourceBatch:source.batch||'',
+    storeId:source.storeId||'',          // store where the production happened
+    storeName:source.storeName||'—',
+    finishedProductId:prod.id,
+    productName:prod.name,
+    kg,
+    notes
+  });
+
+  saveData();
+  clearPdForm();
+  renderAll();
+  toast(`✓ Produced ${fmt(kg)} kg ${prod.name} in ${escapeHtml(sourceStoreName)} — raw ${fmt(source.remaining)} kg / finished ${fmt(prod.remaining)} kg`);
+}
+
+function clearPdForm(){
+  document.getElementById('pd-date').value=todayISO();
+  document.getElementById('pd-source').value='';
+  const psel=document.getElementById('pd-product-sel');if(psel)psel.value='';
+  const pnew=document.getElementById('pd-product-new');if(pnew)pnew.value='';
+  const pwrap=document.getElementById('pd-product-new-wrap');if(pwrap)pwrap.style.display='none';
+  document.getElementById('pd-kg').value='';
+  document.getElementById('pd-notes').value='';
+  updatePdHint();
+}
+
+/* Reverse a production run.
+   Restores raw kg and deducts finished kg. Blocked if finished stock
+   would go negative (= some of it was already drawn down). */
+function deleteProduction(id){
+  const p=data.productions.find(x=>x.id===id);
+  if(!p)return;
+  const src=data.greenBeans.find(g=>g.id===p.sourceId);
+  const prod=data.finishedProducts.find(fp=>fp.id===p.finishedProductId)
+            ||findFinishedByNameAndStore(p.productName, p.storeId)
+            ||findFinishedByName(p.productName); // last-ditch legacy fallback
+
+  // Pre-flight check: would finished stock go negative?
+  if(prod && prod.remaining < p.kg){
+    toast(`Cannot remove — only ${fmt(prod.remaining)} kg of "${prod.name}" remains, but this record produced ${fmt(p.kg)} kg. Some of it has already been used.`,'error');
+    return;
+  }
+
+  const detailParts=[];
+  detailParts.push(`Reverse production of <strong>${fmt(p.kg)} kg ${escapeHtml(p.productName)}</strong>.`);
+  if(src) detailParts.push(`• ${fmt(p.kg)} kg restored to raw batch (${escapeHtml(p.sourceOrigin)}${p.sourceBeanName?' – '+escapeHtml(p.sourceBeanName):''}).`);
+  else    detailParts.push(`• ⚠️ Original raw batch is missing — raw kg cannot be restored.`);
+  if(prod) detailParts.push(`• ${fmt(p.kg)} kg deducted from finished stock (${escapeHtml(prod.name)}).`);
+  else     detailParts.push(`• ⚠️ Finished product no longer exists in stock list.`);
+
+  requirePassword('Reverse Production Run', detailParts.join('<br>'), ()=>{
+    const rec=data.productions.find(x=>x.id===id);
+    if(!rec)return;
+    const s=data.greenBeans.find(g=>g.id===rec.sourceId);
+    const fp=data.finishedProducts.find(x=>x.id===rec.finishedProductId)
+            ||findFinishedByNameAndStore(rec.productName, rec.storeId)
+            ||findFinishedByName(rec.productName);
+
+    // Re-check the pre-flight in case data changed
+    if(fp && fp.remaining < rec.kg){
+      toast('Cannot reverse — finished stock changed and would go negative','error');
+      return;
+    }
+
+    if(s)  s.remaining  += rec.kg;
+    if(fp){
+      fp.remaining     -= rec.kg;
+      fp.totalProduced  = Math.max(0, (fp.totalProduced||0) - rec.kg);
+    }
+    data.productions=data.productions.filter(x=>x.id!==id);
+    saveData();renderAll();
+    toast('Production reversed — raw restored, finished deducted','warn');
+  });
+}
+
+/* ---------- Rendering ---------- */
+
+/* Render the finished-product inventory cards, grouped by store */
+function renderFinishedProducts(){
+  const block=document.getElementById('finishedProductsBlock');
+  if(!block)return;
+
+  if(!data.finishedProducts||data.finishedProducts.length===0){
+    block.innerHTML='<div class="panel"><p class="text-muted" style="text-align:center;padding:30px">No finished products yet. Run your first production batch above to create one.</p></div>';
+    return;
+  }
+
+  // Build per-product source breakdown from the production log
+  const sourcesByProd={};
+  data.productions.forEach(p=>{
+    const key=p.finishedProductId
+      || findFinishedByNameAndStore(p.productName, p.storeId)?.id
+      || (p.productName+'@'+(p.storeId||''));
+    if(!sourcesByProd[key])sourcesByProd[key]={};
+    const lbl=`${p.sourceOrigin||'?'}${p.sourceBeanName?' – '+p.sourceBeanName:''}`;
+    sourcesByProd[key][lbl]=(sourcesByProd[key][lbl]||0)+p.kg;
+  });
+
+  // Group finished products by store
+  const byStore={};
+  data.finishedProducts.forEach(p=>{
+    const k=p.storeId||'__nostore__';
+    if(!byStore[k])byStore[k]=[];
+    byStore[k].push(p);
+  });
+
+  block.innerHTML=Object.entries(byStore).map(([sid,products])=>{
+    const store=data.stores.find(s=>s.id===sid);
+    const storeName=store?store.name:(products[0]?.storeName||'Unassigned');
+    const storeLoc =store?store.location:'';
+    const totalKg  =products.reduce((s,p)=>s+p.remaining,0);
+
+    const cards=products.slice().sort((a,b)=>b.remaining-a.remaining).map(prod=>{
+      const sources=sourcesByProd[prod.id]||{};
+      const sourceList=Object.entries(sources)
+        .sort((a,b)=>b[1]-a[1])
+        .map(([lbl,kg])=>`<span class="badge blue" style="margin:2px 4px 2px 0">${escapeHtml(lbl)}: ${fmt(kg)} kg</span>`)
+        .join('') || '<span class="text-muted small">No source records</span>';
+
+      const remBadge=prod.remaining<=0?'red':(prod.remaining<5?'gold':'green');
+
+      return `<div class="origin-section" style="margin-bottom:14px">
+        <div class="origin-section-header">
+          <div class="origin-section-title">☕ ${escapeHtml(prod.name)}</div>
+          <div class="origin-kpis">
+            <div class="origin-kpi-chip"><div class="origin-kpi-chip-val text-gold">${fmt(prod.remaining)} kg</div><div class="origin-kpi-chip-lbl">In Stock</div></div>
+            <div class="origin-kpi-chip"><div class="origin-kpi-chip-val">${fmt(prod.totalProduced||0)} kg</div><div class="origin-kpi-chip-lbl">Total Produced</div></div>
+            <div class="origin-kpi-chip"><div class="origin-kpi-chip-val">${fmt((prod.totalProduced||0)-prod.remaining)} kg</div><div class="origin-kpi-chip-lbl">Used / Sold</div></div>
+          </div>
+        </div>
+        <div class="origin-section-body">
+          <p class="text-muted small" style="margin-bottom:6px"><strong>Status:</strong> <span class="badge ${remBadge}">${prod.remaining<=0?'OUT OF STOCK':prod.remaining<5?'LOW':'OK'}</span></p>
+          <p class="text-muted small" style="margin-bottom:8px"><strong>Made from:</strong></p>
+          <div style="margin-bottom:6px">${sourceList}</div>
+          <p class="text-muted small" style="margin-top:10px">Created ${prod.createdAt?formatDate(prod.createdAt.slice(0,10)):'—'}${prod.lastProducedAt?` • Last produced ${formatDate(prod.lastProducedAt.slice(0,10))}`:''}</p>
+        </div>
+      </div>`;
+    }).join('');
+
+    return `<div style="margin-bottom:24px">
+      <h3 style="margin-bottom:10px">🏪 ${escapeHtml(storeName)}${storeLoc?` <span class="text-muted small" style="font-weight:400">— ${escapeHtml(storeLoc)}</span>`:''}
+        <span class="badge gold" style="margin-left:8px">${fmt(totalKg)} kg finished</span>
+      </h3>
+      ${cards}
+    </div>`;
+  }).join('');
+}
+
+/* Render the production audit log, grouped by raw source batch */
+function renderProduction(){
+  refreshProductionSourceDropdown();
+  refreshFinishedProductDropdown();
+  renderFinishedProducts();
+
+  const cont=document.getElementById('productionSections');
+  if(!cont)return;
+
+  if(!data.productions||data.productions.length===0){
+    cont.innerHTML='<div class="panel"><p class="text-muted" style="text-align:center;padding:30px">No production runs logged yet.</p></div>';
+    return;
+  }
+
+  // Group by raw source batch
+  const byBatch={};
+  data.productions.forEach(p=>{
+    const k=p.sourceId||'__orphan__';
+    if(!byBatch[k])byBatch[k]=[];
+    byBatch[k].push(p);
+  });
+
+  cont.innerHTML=Object.entries(byBatch).map(([sid,records])=>{
+    const src=data.greenBeans.find(g=>g.id===sid);
+    const totalUsed=records.reduce((s,r)=>s+r.kg,0);
+    const heading=src
+      ? `${getOriginEmoji(src.origin)} ${escapeHtml(src.origin)}${src.beanName?' – '+escapeHtml(src.beanName):''}`
+      : '⚠️ Orphaned Records (raw batch deleted)';
+    const remaining=src?fmt(src.remaining)+' kg':'—';
+    const original =src?fmt(src.kg)+' kg':'—';
+    const subline  =src
+      ? `Supplier: ${escapeHtml(src.supplier||'—')} • Store: ${escapeHtml(src.storeName||'—')}${src.batch?' • Batch: '+escapeHtml(src.batch):''}`
+      : 'These records reference a raw batch that has been removed.';
+
+    return `<div class="origin-section">
+      <div class="origin-section-header">
+        <div class="origin-section-title">${heading}</div>
+        <div class="origin-kpis">
+          <div class="origin-kpi-chip"><div class="origin-kpi-chip-val text-gold">${fmt(totalUsed)} kg</div><div class="origin-kpi-chip-lbl">Used in production</div></div>
+          <div class="origin-kpi-chip"><div class="origin-kpi-chip-val">${remaining}</div><div class="origin-kpi-chip-lbl">Raw remaining</div></div>
+          <div class="origin-kpi-chip"><div class="origin-kpi-chip-val">${original}</div><div class="origin-kpi-chip-lbl">Original received</div></div>
+          <div class="origin-kpi-chip"><div class="origin-kpi-chip-val">${records.length}</div><div class="origin-kpi-chip-lbl">Run${records.length===1?'':'s'}</div></div>
+        </div>
+      </div>
+      <div class="origin-section-body">
+        <p class="text-muted small" style="margin-bottom:12px">${subline}</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Date</th><th>Finished Product</th><th>Quantity</th><th>Notes</th><th>Actions</th></tr></thead>
+            <tbody>${records.map(r=>`
+              <tr>
+                <td>${formatDate(r.date)}</td>
+                <td><strong>${escapeHtml(r.productName)}</strong></td>
+                <td><span class="badge gold">${fmt(r.kg)} kg</span></td>
+                <td class="text-muted small">${escapeHtml(r.notes||'—')}</td>
+                <td>
+                  <button class="btn btn-xs btn-danger" onclick="deleteProduction('${r.id}')">Reverse</button>
+                </td>
+              </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 /* ===== ERP — SEND ROAST TO STORE ===== */
@@ -2672,6 +3604,7 @@ function sendToStore(roastId){
   if(!confirm(`Send ${fmt(r.outKg)} kg of "${beanName}" (${origin}) to the Store?\n\nA transfer request will be broadcast live to the Store Dashboard.\nThe Roastery's ${origin} stock will be reduced by ${fmt(r.outKg)} kg.`))return;
 
   /* Generate two new Firebase keys atomically */
+  if(!db){toast('Firebase unavailable — cannot send to store in local-only mode','error');return;}
   const transferKey=db.ref(TRANSFER_REQUESTS_PATH).push().key;
   const historyKey =db.ref(ROASTERY_HISTORY_PATH).push().key;
 
@@ -2744,6 +3677,7 @@ function showTransferSuccess(beanName, origin, weight, refCode, isoTime){
 
 /* ===== MANUAL SYNC ===== */
 function manualSync(){
+  if(!db){toast('Running in local-only mode — no Firebase connection','warn');return;}
   const btn=document.getElementById('syncRefreshBtn');
   if(btn){btn.classList.add('spinning');btn.disabled=true;}
   setSyncStatus('syncing','SYNCING');
@@ -2940,12 +3874,12 @@ function deleteTransferHistoryEntry(nodeKey, transferKey) {
 
     /* 1. Remove from roastery_history using the Firebase node key directly */
     if (nodeKey) {
-      promises.push(db.ref(ROASTERY_HISTORY_PATH + '/' + nodeKey).remove().catch(e => console.warn('[Delete] history remove failed:', e)));
+      if(db)promises.push(db.ref(ROASTERY_HISTORY_PATH + '/' + nodeKey).remove().catch(e => console.warn('[Delete] history remove failed:', e)));
     }
 
     /* 2. Remove from transfer_requests using the transfer_key */
     if (transferKey) {
-      promises.push(db.ref(TRANSFER_REQUESTS_PATH + '/' + transferKey).remove().catch(e => console.warn('[Delete] request remove failed:', e)));
+      if(db)promises.push(db.ref(TRANSFER_REQUESTS_PATH + '/' + transferKey).remove().catch(e => console.warn('[Delete] request remove failed:', e)));
     }
 
     /* 3. Optimistically remove from local arrays immediately so UI feels instant */
@@ -3001,6 +3935,7 @@ function _doEditRoasting(id){
 }
 
 function renderRoasting(){
+  refreshRoastingSourceDropdown();
   // Roasting Output by Origin
   const roastContainer=document.getElementById('roastOriginSections');
   const wasteContainer=document.getElementById('wasteOriginSections');
@@ -3088,11 +4023,10 @@ function renderRoasting(){
         </div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Date</th><th>Green In</th><th>Wastage (kg)</th><th>Waste %</th><th>Progress</th></tr></thead>
+            <thead><tr><th>Date</th><th>Wastage (kg)</th><th>Waste %</th><th>Progress</th></tr></thead>
             <tbody>${records.map(r=>`
               <tr>
                 <td>${formatDate(r.date)}</td>
-                <td>${fmt(r.inKg)} kg</td>
                 <td class="text-red">${fmt(r.wasteKg)} kg</td>
                 <td><span class="badge ${r.wastePct>15?'red':r.wastePct<10?'green':'gold'}">${r.wastePct.toFixed(1)}%</span></td>
                 <td style="min-width:100px"><div class="progress-bar"><div class="progress-fill ${r.wastePct>15?'red':r.wastePct<10?'green':'gold'}" style="width:${Math.min(r.wastePct*3,100)}%"></div></div></td>
@@ -3107,14 +4041,29 @@ function renderRoasting(){
 
 /* ===== MOVEMENTS ===== */
 function populateMVDropdowns(){
-  // Source batch = green bean records with remaining>0
+  // Source = green bean batches with stock OR finished variations with stock.
+  // Variations use option value "var:<finishedProductId>" so addMovement can branch.
   const src=document.getElementById('mv-source');
   if(!src)return;
   const curSrc=src.value;
-  src.innerHTML='<option value="">— Select green bean batch —</option>'+
-    data.greenBeans.filter(g=>g.remaining>0).map(g=>
-      `<option value="${g.id}">${escapeHtml(g.origin)}${g.beanName?' — '+escapeHtml(g.beanName):''} · [${escapeHtml(g.storeName||'?')}] (${fmt(g.remaining)} kg)</option>`
-    ).join('');
+  let opts='<option value="">— Select source (raw or variation) —</option>';
+  const eligibleRaw=data.greenBeans.filter(g=>g.remaining>0);
+  if(eligibleRaw.length){
+    opts+='<optgroup label="🌿 Raw Green Beans">';
+    eligibleRaw.forEach(g=>{
+      opts+=`<option value="${g.id}">${escapeHtml(g.origin)}${g.beanName?' — '+escapeHtml(g.beanName):''} · [${escapeHtml(g.storeName||'?')}] (${fmt(g.remaining)} kg)</option>`;
+    });
+    opts+='</optgroup>';
+  }
+  const eligibleVar=(data.finishedProducts||[]).filter(p=>p.remaining>0);
+  if(eligibleVar.length){
+    opts+='<optgroup label="☕ Variations">';
+    eligibleVar.forEach(p=>{
+      opts+=`<option value="var:${p.id}">${escapeHtml(p.name)} · [${escapeHtml(p.storeName||'?')}] (${fmt(p.remaining)} kg)</option>`;
+    });
+    opts+='</optgroup>';
+  }
+  src.innerHTML=opts;
   if(curSrc)src.value=curSrc;
 
   // Destination depends on movement type
@@ -3140,56 +4089,105 @@ function refreshMVDestination(){
 function addMovement(){
   const date=document.getElementById('mv-date').value||todayISO();
   const type=document.getElementById('mv-type').value;
-  const sourceId=document.getElementById('mv-source').value;
+  const sourceVal=document.getElementById('mv-source').value;
   const kg=parseFloat(document.getElementById('mv-kg').value);
   const destVal=document.getElementById('mv-dest').value;
   const notes=document.getElementById('mv-notes').value.trim();
-  if(!sourceId){toast('Select a source batch','error');return;}
+  if(!sourceVal){toast('Select a source batch','error');return;}
   if(!kg||kg<=0){toast('Enter a valid quantity','error');return;}
-  const source=data.greenBeans.find(g=>g.id===sourceId);
-  if(!source){toast('Source batch not found','error');return;}
-  if(kg>source.remaining){toast(`Only ${fmt(source.remaining)} kg available in this batch`,'error');return;}
+
+  const isVar=sourceVal.indexOf('var:')===0;
+
+  // Resolve source object (either raw bean or variation)
+  let source, sourceLabel, sourceStoreId, sourceStoreName, sourceOrigin, sourceBeanName;
+  if(isVar){
+    const fpId=sourceVal.slice(4);
+    source=data.finishedProducts.find(p=>p.id===fpId);
+    if(!source){toast('Variation not found','error');return;}
+    sourceLabel=source.name;
+    sourceStoreId=source.storeId||'';
+    sourceStoreName=source.storeName||'—';
+    sourceOrigin=source.name;       // variation has no raw origin per se
+    sourceBeanName=source.name;
+  }else{
+    source=data.greenBeans.find(g=>g.id===sourceVal);
+    if(!source){toast('Source batch not found','error');return;}
+    sourceLabel=`${source.origin}${source.beanName?' — '+source.beanName:''}`;
+    sourceStoreId=source.storeId;
+    sourceStoreName=source.storeName||'—';
+    sourceOrigin=source.origin;
+    sourceBeanName=source.beanName||'';
+  }
+  if(kg>source.remaining){toast(`Only ${fmt(source.remaining)} kg available`,'error');return;}
 
   // Resolve destination label
   let destLabel='';
   if(type==='store_to_roastery'){destLabel='Roastery';}
   else if(type==='store_to_store'){
     if(!destVal){toast('Select a destination store','error');return;}
-    if(destVal===source.storeId){toast('Destination must differ from source','error');return;}
+    if(destVal===sourceStoreId){toast('Destination must differ from source','error');return;}
     const ds=data.stores.find(s=>s.id===destVal);
     destLabel=ds?ds.name:'—';
   }else{destLabel='Adjustment / Write-off';}
 
-  // Deduct from source
+  // Deduct from source pool (raw OR variation — never both)
   source.remaining-=kg;
 
-  // Pre-generate the movement ID so we can cross-link the destination bean record
   const movId=uid();
   let destBeanId=null;
+  let destFinishedId=null;
 
-  // For store→store: create a transfer bean record at the destination
-  // IMPORTANT: flagged isTransfer:true so it is NEVER counted as new received stock.
-  // Total stock across all stores stays unchanged — only per-store balances shift.
+  // For store→store: create a destination record in the SAME pool as the source.
+  // - Raw bean source → create a transfer bean record (isTransfer:true so not double-counted)
+  // - Variation source → bump (or create) the same-named variation in the dest store
   if(type==='store_to_store'){
     const ds=data.stores.find(s=>s.id===destVal);
-    destBeanId=uid();
-    data.greenBeans.unshift({
-      id:destBeanId,date,supplier:source.supplier,origin:source.origin,beanName:source.beanName,
-      kg,storeId:destVal,storeName:ds?ds.name:'—',batch:(source.batch||'')+'-TRF',
-      cost:0,notes:'Transferred from '+(source.storeName||'?'),remaining:kg,
-      isTransfer:true,movementId:movId,fromStoreName:source.storeName||'?'   // internal transfer — excluded from received totals
-    });
+    if(isVar){
+      // Find or create matching variation in destination store
+      let destFp=(data.finishedProducts||[]).find(p=>
+        String(p.name||'').trim().toLowerCase()===String(source.name||'').trim().toLowerCase()
+        && (p.storeId||'')===destVal
+      );
+      if(!destFp){
+        destFp={
+          id:uid(),
+          name:source.name,
+          storeId:destVal,
+          storeName:ds?ds.name:'—',
+          totalProduced:0,
+          remaining:0,
+          createdAt:new Date().toISOString(),
+          lastProducedAt:null,
+          isTransfer:true   // marker — kg here came from a transfer, not new production
+        };
+        data.finishedProducts.unshift(destFp);
+      }
+      destFp.remaining+=kg;
+      // Note: we deliberately do NOT add to totalProduced. Total kg of the
+      // variation across all stores stays the same — only its location changed.
+      destFinishedId=destFp.id;
+    }else{
+      destBeanId=uid();
+      data.greenBeans.unshift({
+        id:destBeanId,date,supplier:source.supplier,origin:source.origin,beanName:source.beanName,
+        kg,storeId:destVal,storeName:ds?ds.name:'—',batch:(source.batch||'')+'-TRF',
+        cost:0,notes:'Transferred from '+(source.storeName||'?'),remaining:kg,
+        isTransfer:true,movementId:movId,fromStoreName:source.storeName||'?'
+      });
+    }
   }
 
   data.movements.unshift({
-    id:movId,date,type,sourceId,
-    sourceName:`${source.origin}${source.beanName?' — '+source.beanName:''}`,
-    sourceOrigin:source.origin,sourceBeanName:source.beanName||'',
-    fromStore:source.storeName||'—',toStore:destLabel,
-    kg,notes,destBeanId   // destBeanId used to clean up the transfer record on delete
+    id:movId,date,type,
+    sourceId:isVar?'':sourceVal,
+    sourceVariationId:isVar?source.id:'',
+    sourceName:sourceLabel + (isVar?' (variation)':''),
+    sourceOrigin, sourceBeanName,
+    fromStore:sourceStoreName,toStore:destLabel,
+    kg,notes,destBeanId,destFinishedId
   });
   saveData();clearMVForm();renderAll();
-  toast(`${fmt(kg)} kg moved: ${source.storeName||'?'} → ${destLabel}`);
+  toast(`${fmt(kg)} kg moved: ${sourceStoreName} → ${destLabel}`);
 }
 function clearMVForm(){
   document.getElementById('mv-date').value=todayISO();
@@ -3203,12 +4201,30 @@ function deleteMovement(id){
   requirePassword('Remove Movement Record','Password required to delete this movement. The source balance will be restored.', ()=>{
     const m=data.movements.find(x=>x.id===id);
     if(m){
-      // Restore quantity to the source batch
-      const src=data.greenBeans.find(g=>g.id===m.sourceId);
-      if(src)src.remaining+=m.kg;
-      // Remove the destination transfer bean record (store_to_store only)
-      if(m.type==='store_to_store'&&m.destBeanId){
-        data.greenBeans=data.greenBeans.filter(g=>g.id!==m.destBeanId);
+      // Restore quantity to the appropriate source pool (raw or variation)
+      if(m.sourceVariationId){
+        const fp=data.finishedProducts.find(p=>p.id===m.sourceVariationId);
+        if(fp) fp.remaining+=m.kg;
+      }else if(m.sourceId){
+        const src=data.greenBeans.find(g=>g.id===m.sourceId);
+        if(src) src.remaining+=m.kg;
+      }
+      // Tear down the destination record created for store→store transfers
+      if(m.type==='store_to_store'){
+        if(m.destBeanId){
+          data.greenBeans=data.greenBeans.filter(g=>g.id!==m.destBeanId);
+        }
+        if(m.destFinishedId){
+          const dfp=data.finishedProducts.find(p=>p.id===m.destFinishedId);
+          if(dfp){
+            dfp.remaining=Math.max(0,dfp.remaining-m.kg);
+            // If the destination variation was created solely by this transfer
+            // and is now empty, remove it to keep the finished products list clean.
+            if(dfp.isTransfer && dfp.remaining<=0 && (dfp.totalProduced||0)<=0){
+              data.finishedProducts=data.finishedProducts.filter(p=>p.id!==dfp.id);
+            }
+          }
+        }
       }
     }
     data.movements=data.movements.filter(x=>x.id!==id);
@@ -3322,6 +4338,53 @@ function saveStore(id){
     saveData();renderAll();toast(`Store "${name}" saved`);
   });
 }
+/* ===== DEFAULT ROASTING STORE (Rule A) ===== */
+function saveDefaultRoastingStore(){
+  const sel=document.getElementById('defaultRoastingStoreSelect');
+  if(!sel)return;
+  const val=sel.value;
+  const targetStore=val?data.stores.find(s=>s.id===val):null;
+  const subText=targetStore
+    ? `Lock the Roasting Log to "${targetStore.name}"? Password required to change this critical setting.`
+    : 'Remove the Default Roasting Store lock? Password required to change this critical setting.';
+  requirePassword('🏭 Default Roasting Store', subText, ()=>{
+    // Save to dedicated localStorage key AND data object so Firebase sync cannot wipe it
+    try{ localStorage.setItem('windmill_defaultRoastStoreId', val); }catch(e){}
+    data.defaultRoastingStoreId=val;
+    saveData();
+    const store=val?data.stores.find(s=>s.id===val):null;
+    const status=document.getElementById('defaultRoastStoreStatus');
+    if(status){
+      if(store){
+        status.innerHTML='Roasting Log is now LOCKED to <strong>'+escapeHtml(store.name)+'</strong>. Beans from other stores will NOT appear in the source dropdown.';
+      }else{
+        status.innerHTML='No lock active.';
+      }
+    }
+    renderAll();
+    toast(store?'Roasting locked to: '+store.name:'Roasting store lock removed');
+  });
+}
+
+function refreshDefaultRoastingStoreDropdown(){
+  const sel=document.getElementById('defaultRoastingStoreSelect');
+  if(!sel)return;
+  var _lsVal='';try{_lsVal=localStorage.getItem('windmill_defaultRoastStoreId')||'';}catch(e){}
+  const cur=_lsVal||data.defaultRoastingStoreId||'';
+  sel.innerHTML='<option value="">— No lock (any store) —</option>'+
+    data.stores.map(s=>`<option value="${s.id}"${s.id===cur?' selected':''}>${escapeHtml(s.name)} — ${escapeHtml(s.location)}</option>`).join('');
+  sel.value=cur;
+  const status=document.getElementById('defaultRoastStoreStatus');
+  if(status){
+    const store=cur?data.stores.find(s=>s.id===cur):null;
+    if(store){
+      status.innerHTML=`✅ Currently locked to <strong>${escapeHtml(store.name)}</strong>.`;
+    }else{
+      status.innerHTML="ℹ️ No lock active — any store's beans can be selected in the Roasting Log.";
+    }
+  }
+}
+
 function saveThreshold(){
   const v=parseFloat(document.getElementById('lowThreshold').value);
   if(isNaN(v)||v<0){toast('Enter a valid number','error');return;}
@@ -3330,9 +4393,26 @@ function saveThreshold(){
 function renderStoresEdit(){
   const grid=document.getElementById('storesEditGrid');
   document.getElementById('storeCount').textContent=data.stores.length;
+  refreshDefaultRoastingStoreDropdown();
   if(data.stores.length===0){grid.innerHTML='<p class="text-muted">No stores yet.</p>';return;}
   grid.innerHTML=data.stores.map((s,i)=>{
-    const bal=getStoreBalance(s.id);
+    // Per-batch productions so we can compute "as variations" kg per store
+    const productionsByBatch={};
+    (data.productions||[]).forEach(p=>{
+      if(p.storeId!==s.id)return;
+      if(!productionsByBatch[p.sourceId||''])productionsByBatch[p.sourceId||'']={};
+      productionsByBatch[p.sourceId||''][p.productName]=
+        (productionsByBatch[p.sourceId||''][p.productName]||0)+p.kg;
+    });
+    const batchesHere=data.greenBeans.filter(g=>g.storeId===s.id);
+    const rawNow      = batchesHere.reduce((x,g)=>x+g.remaining, 0);
+    const variationKg = batchesHere.reduce((x,g)=>{
+      const p=productionsByBatch[g.id]||{};
+      return x+Object.values(p).reduce((a,b)=>a+b,0);
+    }, 0);
+    const totalStock = rawNow + variationKg;  // total kg owned by the store
+
+    const bal=totalStock;
     const saf=s.safetyStock||0;
     const originMap={};
     data.greenBeans.filter(g=>g.storeId===s.id&&g.remaining>0).forEach(g=>{
@@ -3347,6 +4427,7 @@ function renderStoresEdit(){
         <strong>Store #${i+1} &nbsp;<span class="badge ${belowSafety||bal<=0?'red':bal<data.lowThreshold?'gold':'green'}">${fmt(bal)} kg</span> ${statusBadge}</strong>
         <button class="btn btn-xs btn-danger" onclick="deleteStore('${s.id}')">🗑 Delete</button>
       </div>
+      ${variationKg>0?`<div class="text-muted small" style="margin:-4px 0 8px 0">Total stock: ${fmt(bal)} kg = ${fmt(rawNow)} kg raw + ${fmt(variationKg)} kg as variations</div>`:''}
       <div class="form-row three">
         <div><label>Store Name</label><input type="text" id="store-name-${s.id}" value="${escapeHtml(s.name)}" placeholder="Store name"/></div>
         <div><label>Location / Branch</label><input type="text" id="store-loc-${s.id}" value="${escapeHtml(s.location)}" placeholder="Branch location"/></div>
@@ -3367,21 +4448,70 @@ function renderDashboardStores(){
   const grid=document.getElementById('dashboardStores');
   const storesWithBal=getAllStoreBalances();
   if(storesWithBal.length===0){grid.innerHTML='<p class="text-muted">No stores configured.</p>';return;}
+
+  // Pre-build: for each raw batch id → list of {productName, kg} produced from it
+  const productionsByBatch={};
+  (data.productions||[]).forEach(p=>{
+    const k=p.sourceId||'';
+    if(!productionsByBatch[k])productionsByBatch[k]={};
+    productionsByBatch[k][p.productName]=(productionsByBatch[k][p.productName]||0)+p.kg;
+  });
+
   grid.innerHTML=storesWithBal.map(s=>{
-    const originMap={};
-    data.greenBeans.filter(g=>g.storeId===s.id&&g.remaining>0).forEach(g=>{
-      if(!originMap[g.origin])originMap[g.origin]=0;
-      originMap[g.origin]+=g.remaining;
-    });
-    const origins=Object.entries(originMap).sort((a,b)=>b[1]-a[1]);
-    const bal=s.balance;
+    // Raw batches in this store — keep ALL batches that ever had kg, including
+    // ones fully drawn down, so the original "received" total stays visible.
+    const batchesHere=data.greenBeans
+      .filter(g=>g.storeId===s.id && (g.kg>0))
+      .sort((a,b)=>b.kg-a.kg);
+
+    // Per-store totals across ALL batches (active + drawn-down)
+    const totalReceived = batchesHere.reduce((x,g)=>x+g.kg, 0);
+    const totalRawNow   = batchesHere.reduce((x,g)=>x+g.remaining, 0);
+    const totalFinishedFromHere = batchesHere.reduce((x,g)=>{
+      const p=productionsByBatch[g.id]||{};
+      return x + Object.values(p).reduce((a,b)=>a+b, 0);
+    }, 0);
+
     const saf=s.safetyStock||0;
-    const isEmpty=bal<=0;
-    const isCritical=saf>0&&bal<saf;
-    const isLow=bal<data.lowThreshold;
+    const totalNow = totalRawNow + totalFinishedFromHere;  // raw + variations = total stock owned
+    const isEmpty=totalNow<=0;
+    const isCritical=saf>0&&totalNow<saf;
+    const isLow=totalNow<data.lowThreshold;
     const badgeClass=isEmpty?'red':isCritical?'red':isLow?'gold':'green';
     const badgeText=isEmpty?'Out of Stock':isCritical?'Below Safety':isLow?'Low Stock':'In Stock';
-    const totalBatches=data.greenBeans.filter(g=>g.storeId===s.id&&g.remaining>0).length;
+
+    // Build per-batch breakdown: parent = batch.kg, children = remaining + each finished derivative
+    const batchBlocks = batchesHere.map(g=>{
+      const productionsFromThisBatch = productionsByBatch[g.id] || {};
+      const totalProduced = Object.values(productionsFromThisBatch).reduce((a,b)=>a+b,0);
+      const accounted = g.remaining + totalProduced;
+      const drift = Math.abs(g.kg - accounted);
+
+      const childRows = [];
+      childRows.push(`<div class="store-batch-child">
+        <span>↳ 🌿 Raw remaining</span>
+        <span>${fmt(g.remaining)} kg</span>
+      </div>`);
+      Object.entries(productionsFromThisBatch).sort((a,b)=>b[1]-a[1]).forEach(([prodName,kg])=>{
+        childRows.push(`<div class="store-batch-child">
+          <span>↳ ☕ ${escapeHtml(prodName)}</span>
+          <span>${fmt(kg)} kg</span>
+        </div>`);
+      });
+
+      const driftBadge = drift>0.01
+        ? ` <span class="badge red" style="font-size:10px">drift ${fmt(drift)}kg</span>`
+        : '';
+
+      return `<div class="store-batch-block">
+        <div class="store-batch-head">
+          <span>${getOriginEmoji(g.origin)} ${escapeHtml(g.origin)}${g.beanName?' – '+escapeHtml(g.beanName):''}${g.batch?` <span class="text-muted small" style="font-weight:400">[${escapeHtml(g.batch)}]</span>`:''}${driftBadge}</span>
+          <span class="text-gold">${fmt(g.kg)} kg</span>
+        </div>
+        ${childRows.join('')}
+      </div>`;
+    }).join('');
+
     return `<div class="store-card">
       <div class="store-card-header">
         <div>
@@ -3392,23 +4522,29 @@ function renderDashboardStores(){
       </div>
       <div class="store-stats">
         <div class="store-stat balance">
-          <div class="store-stat-val">${fmt(bal)}<span style="font-size:12px;color:var(--muted)"> kg</span></div>
-          <div class="store-stat-lbl">GB Balance</div>
+          <div class="store-stat-val">${fmt(totalReceived)}<span style="font-size:12px;color:var(--muted)"> kg</span></div>
+          <div class="store-stat-lbl">Total Stock</div>
         </div>
         <div class="store-stat status-val">
-          <div class="store-stat-val">${totalBatches}</div>
-          <div class="store-stat-lbl">Batches</div>
+          <div class="store-stat-val">${fmt(totalRawNow)}<span style="font-size:12px;color:var(--muted)"> kg</span></div>
+          <div class="store-stat-lbl">Still Raw</div>
+        </div>
+        <div class="store-stat status-val">
+          <div class="store-stat-val">${fmt(totalFinishedFromHere)}<span style="font-size:12px;color:var(--muted)"> kg</span></div>
+          <div class="store-stat-lbl">As Variations</div>
         </div>
       </div>
-      ${origins.length>0
-        ?`<div class="store-origins-list">${origins.map(([o,v])=>`<div class="store-origin-row"><span>${getOriginEmoji(o)} ${escapeHtml(o)}</span><span>${fmt(v)} kg</span></div>`).join('')}</div>`
-        :'<div style="margin-top:10px;font-size:12px;color:var(--muted);border-top:1px solid var(--line);padding-top:10px;text-align:center">No stock assigned</div>'}
+
+      ${batchesHere.length>0
+        ? `<div style="margin-top:10px">${batchBlocks}</div>`
+        : '<div style="margin-top:10px;font-size:12px;color:var(--muted);border-top:1px solid var(--line);padding-top:10px;text-align:center">No stock assigned</div>'}
     </div>`;
   }).join('');
 }
 
 function renderOriginCards(){
   const grid=document.getElementById('originCards');
+  // ── Raw origins (Colombia, Ethiopia Guji, etc.) ──
   const map={};
   data.greenBeans.forEach(g=>{
     if(!map[g.origin])map[g.origin]={origin:g.origin,supplier:g.supplier,beanNames:new Set(),totalReceived:0,remaining:0};
@@ -3422,14 +4558,68 @@ function renderOriginCards(){
     wasteMap[r.sourceOrigin].roasted+=r.outKg;
     wasteMap[r.sourceOrigin].waste+=r.wasteKg;
   });
-  const entries=Object.values(map).sort((a,b)=>b.remaining-a.remaining);
-  if(entries.length===0){
+  // Per-origin variation totals (so origin cards can show "As Variations")
+  const variationsByOrigin={};
+  (data.productions||[]).forEach(p=>{
+    const src=data.greenBeans.find(g=>g.id===p.sourceId);
+    const origin=(src&&src.origin)||p.sourceOrigin||'';
+    if(!origin)return;
+    if(!variationsByOrigin[origin])variationsByOrigin[origin]={totalKg:0,products:{}};
+    variationsByOrigin[origin].totalKg+=p.kg;
+    variationsByOrigin[origin].products[p.productName]=(variationsByOrigin[origin].products[p.productName]||0)+p.kg;
+  });
+  // Roasting waste applied to variations (when a variation is roasted, we
+  // log the roasting record with sourceOrigin set to "Variation: <name>" — see roasting flow).
+  const variationRoastMap={};
+  data.roasting.forEach(r=>{
+    if(r.sourceVariationId){
+      if(!variationRoastMap[r.sourceVariationId])variationRoastMap[r.sourceVariationId]={roasted:0,waste:0};
+      variationRoastMap[r.sourceVariationId].roasted+=r.outKg;
+      variationRoastMap[r.sourceVariationId].waste+=r.wasteKg;
+    }
+  });
+
+  const originEntries=Object.values(map).sort((a,b)=>b.totalReceived-a.totalReceived);
+
+  // ── Variation tiles (one per finished product with stock > 0) ──
+  const variationTiles=(data.finishedProducts||[]).filter(p=>(p.totalProduced||0)>0).map(p=>{
+    // Trace to which raw origin(s) this came from for the supplier line
+    const sources={};
+    (data.productions||[]).forEach(pr=>{
+      if(pr.finishedProductId!==p.id)return;
+      const src=data.greenBeans.find(g=>g.id===pr.sourceId);
+      const originName=(src&&src.origin)||pr.sourceOrigin||'?';
+      sources[originName]=(sources[originName]||0)+pr.kg;
+    });
+    const originList=Object.entries(sources).sort((a,b)=>b[1]-a[1]);
+    const primaryOrigin=originList[0]?originList[0][0]:'';
+    const w=variationRoastMap[p.id]||{roasted:0,waste:0};
+    return {
+      __isVariation:true,
+      product:p,
+      primaryOrigin,
+      sourceOrigins:originList,
+      remaining:p.remaining,
+      totalProduced:p.totalProduced||0,
+      roasted:w.roasted,
+      waste:w.waste
+    };
+  }).sort((a,b)=>b.remaining-a.remaining);
+
+  if(originEntries.length===0 && variationTiles.length===0){
     grid.innerHTML='<div class="panel" style="grid-column:1/-1"><p class="text-muted" style="text-align:center;padding:30px">No green bean deliveries recorded yet.</p></div>';
     return;
   }
-  grid.innerHTML=entries.map(e=>{
+
+  // Render raw origin cards first, then variation cards
+  const rawCards=originEntries.map(e=>{
     const w=wasteMap[e.origin]||{roasted:0,waste:0};
     const beanNameList=[...e.beanNames];
+    const v=variationsByOrigin[e.origin]||{totalKg:0,products:{}};
+    const productChips=Object.entries(v.products)
+      .sort((a,b)=>b[1]-a[1])
+      .map(([n,k])=>`<span class="variation-chip">☕ ${escapeHtml(n)} <strong>${fmt(k)} kg</strong></span>`)
+      .join('');
     return `<div class="origin-card">
       <div class="origin-header">
         <div>
@@ -3437,15 +4627,55 @@ function renderOriginCards(){
           <div class="origin-supplier">${escapeHtml(e.supplier)}</div>
           ${beanNameList.length>0?`<div class="origin-bean-name">${beanNameList.slice(0,2).map(b=>escapeHtml(b)).join(', ')}</div>`:''}
         </div>
-        <span class="badge ${e.remaining<=0?'red':e.remaining<e.totalReceived*0.2?'gold':'green'}">${e.remaining<=0?'Depleted':'In Stock'}</span>
+        <span class="badge ${e.remaining<=0&&v.totalKg<=0?'red':e.remaining<e.totalReceived*0.2?'gold':'green'}">${e.remaining<=0&&v.totalKg<=0?'Depleted':'In Stock'}</span>
       </div>
       <div class="origin-stats">
-        <div class="origin-stat gb"><div class="origin-stat-val">${fmt(e.remaining)}<span style="font-size:12px;color:var(--muted)"> kg</span></div><div class="origin-stat-lbl">GB Balance</div></div>
-        <div class="origin-stat roast"><div class="origin-stat-val">${fmt(w.roasted)}<span style="font-size:12px;color:var(--muted)"> kg</span></div><div class="origin-stat-lbl">Roasted</div></div>
-        <div class="origin-stat waste"><div class="origin-stat-val">${fmt(w.waste)}<span style="font-size:12px;color:var(--muted)"> kg</span></div><div class="origin-stat-lbl">Wasted</div></div>
+        <div class="origin-stat gb"><div class="origin-stat-val">${fmt(e.remaining)}<span class="origin-stat-unit"> kg</span></div><div class="origin-stat-lbl">Still Raw</div></div>
+        <div class="origin-stat gb"><div class="origin-stat-val">${fmt(v.totalKg)}<span class="origin-stat-unit"> kg</span></div><div class="origin-stat-lbl">Variations</div></div>
+        <div class="origin-stat roast"><div class="origin-stat-val">${fmt(w.roasted)}<span class="origin-stat-unit"> kg</span></div><div class="origin-stat-lbl">Roasted</div></div>
+        <div class="origin-stat waste"><div class="origin-stat-val">${fmt(w.waste)}<span class="origin-stat-unit"> kg</span></div><div class="origin-stat-lbl">Wasted</div></div>
+      </div>
+      ${productChips?`<div class="origin-variations-inline"><div class="origin-variations-label">Variations made:</div><div class="origin-variations-chips">${productChips}</div></div>`:''}
+    </div>`;
+  }).join('');
+
+  const varCards=variationTiles.map(t=>{
+    const p=t.product;
+    // Trace label — keep it short
+    const sourceTrace = t.sourceOrigins.length>0
+      ? t.sourceOrigins.map(([o,k])=>`${escapeHtml(o)} ${fmt(k)} kg`).join(' + ')
+      : '';
+    const statusBadge = p.remaining<=0
+      ? '<span class="badge red">Depleted</span>'
+      : p.remaining<5
+        ? '<span class="badge gold">Low</span>'
+        : '<span class="badge green">In Stock</span>';
+    // % Used = (totalProduced - remaining) / totalProduced
+    const totalProd=t.totalProduced||0;
+    const used=Math.max(0,totalProd - p.remaining);
+    const pctUsed=totalProd>0 ? Math.round((used/totalProd)*100) : 0;
+    return `<div class="origin-card variation-card">
+      <div class="origin-header">
+        <div style="flex:1;min-width:0">
+          <div class="origin-name">
+            <span class="variation-tag">VARIATION</span>
+            ☕ ${escapeHtml(p.name)}
+          </div>
+          <div class="origin-supplier">${getOriginEmoji(t.primaryOrigin)} ${escapeHtml(t.primaryOrigin)}${p.storeName?` · ${escapeHtml(p.storeName)}`:''}</div>
+          ${sourceTrace?`<div class="origin-bean-name">From: ${sourceTrace}</div>`:''}
+        </div>
+        ${statusBadge}
+      </div>
+      <div class="origin-stats">
+        <div class="origin-stat gb"><div class="origin-stat-val">${fmt(p.remaining)}<span class="origin-stat-unit"> kg</span></div><div class="origin-stat-lbl">In Stock</div></div>
+        <div class="origin-stat roast"><div class="origin-stat-val">${fmt(t.roasted)}<span class="origin-stat-unit"> kg</span></div><div class="origin-stat-lbl">Roasted</div></div>
+        <div class="origin-stat waste"><div class="origin-stat-val">${fmt(t.waste)}<span class="origin-stat-unit"> kg</span></div><div class="origin-stat-lbl">Wasted</div></div>
+        <div class="origin-stat"><div class="origin-stat-val">${pctUsed}<span class="origin-stat-unit">%</span></div><div class="origin-stat-lbl">Used</div></div>
       </div>
     </div>`;
   }).join('');
+
+  grid.innerHTML=rawCards+varCards;
 }
 
 function renderDashRoastOrigins(){
@@ -3692,14 +4922,38 @@ function renderReports(){
   const sorted=Object.keys(byDate).sort().reverse();
   const tbody=document.getElementById('dailyReport');
   tbody.innerHTML=sorted.length===0
-    ?'<tr class="empty-row"><td colspan="6">No roasting in this period.</td></tr>'
+    ?'<tr class="empty-row"><td colspan="6"><span class="empty-ico">☕</span>No roasting in this period.</td></tr>'
     :sorted.map(date=>{
       const d=byDate[date];const avg=d.inKg>0?(d.wasteKg/d.inKg)*100:0;
-      return `<tr><td><strong>${formatDate(date)}</strong></td><td>${d.batches}</td>
-        <td>${fmt(d.inKg)} kg</td><td class="text-green">${fmt(d.outKg)} kg</td>
-        <td class="text-red">${fmt(d.wasteKg)} kg</td>
-        <td><span class="badge ${avg>15?'red':avg<10?'green':'gold'}">${avg.toFixed(1)}%</span></td></tr>`;
+      return `<tr>
+        <td class="col-period"><span class="period-pill">${formatDate(date)}</span></td>
+        <td class="num batches"><strong>${d.batches}</strong></td>
+        <td class="num in"><strong>${fmt(d.inKg)}</strong><span class="unit">kg</span></td>
+        <td class="num out"><strong>${fmt(d.outKg)}</strong><span class="unit">kg</span></td>
+        <td class="num waste"><strong>${fmt(d.wasteKg)}</strong><span class="unit">kg</span></td>
+        <td class="col-avg"><span class="badge ${avg>15?'red':avg<10?'green':'gold'}">${avg.toFixed(1)}%</span></td>
+      </tr>`;
     }).join('');
+  // Daily totals footer
+  const dFoot=document.getElementById('dailyReportFoot');
+  if(dFoot){
+    if(sorted.length===0){dFoot.innerHTML='';}
+    else{
+      const tB=sorted.reduce((s,k)=>s+byDate[k].batches,0);
+      const tIn=sorted.reduce((s,k)=>s+byDate[k].inKg,0);
+      const tOut=sorted.reduce((s,k)=>s+byDate[k].outKg,0);
+      const tWa=sorted.reduce((s,k)=>s+byDate[k].wasteKg,0);
+      const tAvg=tIn>0?(tWa/tIn)*100:0;
+      dFoot.innerHTML=`<tr>
+        <td>Totals</td>
+        <td class="num batches"><strong>${tB}</strong></td>
+        <td class="num in"><strong>${fmt(tIn)}</strong><span class="unit">kg</span></td>
+        <td class="num out"><strong>${fmt(tOut)}</strong><span class="unit">kg</span></td>
+        <td class="num waste"><strong>${fmt(tWa)}</strong><span class="unit">kg</span></td>
+        <td class="col-avg"><span class="badge ${tAvg>15?'red':tAvg<10?'green':'gold'}">${tAvg.toFixed(1)}%</span></td>
+      </tr>`;
+    }
+  }
 
   // Summary
   const tI=filtered.reduce((s,r)=>s+r.inKg,0);
@@ -3731,13 +4985,39 @@ function renderReports(){
     byWeek[wk].batches++;byWeek[wk].inKg+=r.inKg;byWeek[wk].outKg+=r.outKg;byWeek[wk].wasteKg+=r.wasteKg;
   });
   document.getElementById('weeklyReport').innerHTML=Object.entries(byWeek).length===0
-    ?'<tr class="empty-row"><td colspan="6">No data</td></tr>'
+    ?'<tr class="empty-row"><td colspan="6"><span class="empty-ico">📅</span>No data</td></tr>'
     :Object.entries(byWeek).reverse().map(([wk,d])=>{
       const avg=d.inKg>0?(d.wasteKg/d.inKg)*100:0;
-      return `<tr><td><strong>${escapeHtml(wk)}</strong></td><td>${d.batches}</td><td>${fmt(d.inKg)} kg</td>
-        <td class="text-green">${fmt(d.outKg)} kg</td><td class="text-red">${fmt(d.wasteKg)} kg</td>
-        <td><span class="badge ${avg>15?'red':avg<10?'green':'gold'}">${avg.toFixed(1)}%</span></td></tr>`;
+      return `<tr>
+        <td class="col-period"><span class="period-pill">${escapeHtml(wk)}</span></td>
+        <td class="num batches"><strong>${d.batches}</strong></td>
+        <td class="num in"><strong>${fmt(d.inKg)}</strong><span class="unit">kg</span></td>
+        <td class="num out"><strong>${fmt(d.outKg)}</strong><span class="unit">kg</span></td>
+        <td class="num waste"><strong>${fmt(d.wasteKg)}</strong><span class="unit">kg</span></td>
+        <td class="col-avg"><span class="badge ${avg>15?'red':avg<10?'green':'gold'}">${avg.toFixed(1)}%</span></td>
+      </tr>`;
     }).join('');
+  // Weekly totals footer
+  const wFoot=document.getElementById('weeklyReportFoot');
+  if(wFoot){
+    const wkEntries=Object.entries(byWeek);
+    if(wkEntries.length===0){wFoot.innerHTML='';}
+    else{
+      const tB=wkEntries.reduce((s,[,d])=>s+d.batches,0);
+      const tIn=wkEntries.reduce((s,[,d])=>s+d.inKg,0);
+      const tOut=wkEntries.reduce((s,[,d])=>s+d.outKg,0);
+      const tWa=wkEntries.reduce((s,[,d])=>s+d.wasteKg,0);
+      const tAvg=tIn>0?(tWa/tIn)*100:0;
+      wFoot.innerHTML=`<tr>
+        <td>Totals</td>
+        <td class="num batches"><strong>${tB}</strong></td>
+        <td class="num in"><strong>${fmt(tIn)}</strong><span class="unit">kg</span></td>
+        <td class="num out"><strong>${fmt(tOut)}</strong><span class="unit">kg</span></td>
+        <td class="num waste"><strong>${fmt(tWa)}</strong><span class="unit">kg</span></td>
+        <td class="col-avg"><span class="badge ${tAvg>15?'red':tAvg<10?'green':'gold'}">${tAvg.toFixed(1)}%</span></td>
+      </tr>`;
+    }
+  }
 
   // Monthly
   const byMonth={};
@@ -3747,13 +5027,39 @@ function renderReports(){
     byMonth[mo].batches++;byMonth[mo].inKg+=r.inKg;byMonth[mo].outKg+=r.outKg;byMonth[mo].wasteKg+=r.wasteKg;
   });
   document.getElementById('monthlyReport').innerHTML=Object.entries(byMonth).length===0
-    ?'<tr class="empty-row"><td colspan="6">No data</td></tr>'
+    ?'<tr class="empty-row"><td colspan="6"><span class="empty-ico">📆</span>No data</td></tr>'
     :Object.entries(byMonth).reverse().map(([mo,d])=>{
       const avg=d.inKg>0?(d.wasteKg/d.inKg)*100:0;
-      return `<tr><td><strong>${escapeHtml(mo)}</strong></td><td>${d.batches}</td><td>${fmt(d.inKg)} kg</td>
-        <td class="text-green">${fmt(d.outKg)} kg</td><td class="text-red">${fmt(d.wasteKg)} kg</td>
-        <td><span class="badge ${avg>15?'red':avg<10?'green':'gold'}">${avg.toFixed(1)}%</span></td></tr>`;
+      return `<tr>
+        <td class="col-period"><span class="period-pill">${escapeHtml(mo)}</span></td>
+        <td class="num batches"><strong>${d.batches}</strong></td>
+        <td class="num in"><strong>${fmt(d.inKg)}</strong><span class="unit">kg</span></td>
+        <td class="num out"><strong>${fmt(d.outKg)}</strong><span class="unit">kg</span></td>
+        <td class="num waste"><strong>${fmt(d.wasteKg)}</strong><span class="unit">kg</span></td>
+        <td class="col-avg"><span class="badge ${avg>15?'red':avg<10?'green':'gold'}">${avg.toFixed(1)}%</span></td>
+      </tr>`;
     }).join('');
+  // Monthly totals footer
+  const mFoot=document.getElementById('monthlyReportFoot');
+  if(mFoot){
+    const moEntries=Object.entries(byMonth);
+    if(moEntries.length===0){mFoot.innerHTML='';}
+    else{
+      const tB=moEntries.reduce((s,[,d])=>s+d.batches,0);
+      const tIn=moEntries.reduce((s,[,d])=>s+d.inKg,0);
+      const tOut=moEntries.reduce((s,[,d])=>s+d.outKg,0);
+      const tWa=moEntries.reduce((s,[,d])=>s+d.wasteKg,0);
+      const tAvg=tIn>0?(tWa/tIn)*100:0;
+      mFoot.innerHTML=`<tr>
+        <td>Totals</td>
+        <td class="num batches"><strong>${tB}</strong></td>
+        <td class="num in"><strong>${fmt(tIn)}</strong><span class="unit">kg</span></td>
+        <td class="num out"><strong>${fmt(tOut)}</strong><span class="unit">kg</span></td>
+        <td class="num waste"><strong>${fmt(tWa)}</strong><span class="unit">kg</span></td>
+        <td class="col-avg"><span class="badge ${tAvg>15?'red':tAvg<10?'green':'gold'}">${tAvg.toFixed(1)}%</span></td>
+      </tr>`;
+    }
+  }
 
   // Stock Records
   const filteredGB=data.greenBeans.filter(g=>g.date>=from&&g.date<=to);
@@ -3960,8 +5266,8 @@ function clearGreenBeansData(){
 function clearAllTransferHistory(){
   requirePassword('Clear Transfer History', 'ALL transfer history records will be permanently deleted from Firebase. This cannot be undone. Enter password to confirm.', ()=>{
     /* Remove entire roastery_history node and all transfer_requests from Firebase */
-    const p1 = db.ref(ROASTERY_HISTORY_PATH).remove().catch(e=>console.warn('[ClearHistory]',e));
-    const p2 = db.ref(TRANSFER_REQUESTS_PATH).remove().catch(e=>console.warn('[ClearRequests]',e));
+    const p1 = db?db.ref(ROASTERY_HISTORY_PATH).remove().catch(e=>console.warn('[ClearHistory]',e)):Promise.resolve();
+    const p2 = db?db.ref(TRANSFER_REQUESTS_PATH).remove().catch(e=>console.warn('[ClearRequests]',e)):Promise.resolve();
     /* Clear local arrays immediately */
     roasteryHistory = [];
     roasteryTransferRequests = [];
@@ -3992,6 +5298,7 @@ function renderAll(){
   renderDashRoastOrigins();
   renderGreenBeans();
   renderRoasting();
+  renderProduction();
   renderMovements();
   renderStoresEdit();
   renderRoastLevels();
@@ -4042,6 +5349,11 @@ function init(){
   if(mvDate)mvDate.value=todayISO();
   const mvType=document.getElementById('mv-type');
   if(mvType)mvType.addEventListener('change',refreshMVDestination);
+  // Production page: default date + live preview hook
+  const pdDate=document.getElementById('pd-date');
+  if(pdDate)pdDate.value=todayISO();
+  const pdSource=document.getElementById('pd-source');
+  if(pdSource)pdSource.addEventListener('change',updatePdHint);
   updateCalc();
   renderAll();
 }
