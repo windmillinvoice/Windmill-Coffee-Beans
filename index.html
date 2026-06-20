@@ -8,14 +8,19 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script>
+  /* ════════════════════════════════════════════════════════════════════
+     FIREBASE CONFIG — project: green-beans--coffee
+     For the Realtime Database, only apiKey / authDomain / databaseURL /
+     projectId are required. messagingSenderId & appId are optional (only
+     needed for Cloud Messaging / Analytics) and can be added later from
+     Project Settings → General → Your apps if you ever want them.
+  ═════════════════════════════════════════════════════════════════════ */
   const firebaseConfig = {
-    apiKey: "AIzaSyCqS-QV9UfCSF0pJ3Ft4d9MjmboV2J4ZBE",
-    authDomain: "windmill-beans.firebaseapp.com",
-    databaseURL: "https://windmill-beans-default-rtdb.firebaseio.com/",
-    projectId: "windmill-beans",
-    storageBucket: "windmill-beans.appspot.com",
-    messagingSenderId: "windmill-beans",
-    appId: "windmill-beans"
+    apiKey: "AIzaSyC_jRAnOfPvvrEmU98xt6jWT1KCX8WBFgw",
+    authDomain: "green-beans--coffee.firebaseapp.com",
+    databaseURL: "https://green-beans--coffee-default-rtdb.firebaseio.com/",
+    projectId: "green-beans--coffee",
+    storageBucket: "green-beans--coffee.appspot.com"
   };
   const FB_PATH = 'dashboard/data';
   const TRANSFER_REQUESTS_PATH = 'transfer_requests';
@@ -1175,7 +1180,7 @@ body.theme-dark #alert-log-panel{box-shadow:0 16px 48px rgba(0,0,0,.45);}
     <button id="alert-bell-btn" onclick="toggleAlertLog()" title="Store stock alerts">🔔 <span id="alert-bell-count">0</span></button>
     <button id="alert-mute-btn" onclick="toggleAlertMute()" title="Mute alert sounds" style="background:none;border:1px solid var(--line);border-radius:8px;padding:6px 9px;cursor:pointer;font-size:15px;color:var(--muted);transition:border-color .2s,background .2s;" onmouseenter="this.style.borderColor='var(--gold)'" onmouseleave="this.style.borderColor='var(--line)'">🔔</button>
     <button class="btn-ghost" onclick="toggleTheme()" title="Toggle theme" id="themeToggleBtn">🌙</button>
-    <button class="btn-ghost logout-btn" onclick="doLogout()" title="Log Out" aria-label="Log Out" style="padding:6px 10px;font-size:18px;line-height:1;display:flex;align-items:center;justify-content:center;border-radius:8px;"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button>
+    <button class="btn-ghost logout-btn" onclick="doLogout()" title="Log Out" aria-label="Log Out" style="display:none;padding:6px 10px;font-size:18px;line-height:1;align-items:center;justify-content:center;border-radius:8px;"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button>
   </div>
 </header>
 
@@ -2190,23 +2195,26 @@ function doLogin(){
   }
 }
 function doLogout(){
-  if(!confirm('Sign out?'))return;
-  sessionStorage.removeItem(SESSION_KEY);
-  document.getElementById('appShell').style.display='none';
-  document.getElementById('loginOverlay').style.display='flex';
-  document.getElementById('loginUser').value='';document.getElementById('loginPass').value='';
-  document.getElementById('loginError').classList.remove('show');
+  /* Login is disabled — there is nothing to sign out of, so this just
+     keeps the user inside the dashboard instead of showing a dead login box. */
+  toast('Login is disabled on this dashboard');
 }
-/* Auto-restore session on page load/refresh */
-(function checkSession(){
-  try{
-    const s=sessionStorage.getItem(SESSION_KEY);
-    if(s){
-      document.getElementById('loginOverlay').style.display='none';
-      document.getElementById('appShell').style.display='block';
+/* ═══ LOGIN DISABLED ═══
+   The login password has been removed. The app now boots straight into
+   the dashboard on every page load / refresh — no username or password. */
+(function bootApp(){
+  function go(){
+    try{
+      var ov=document.getElementById('loginOverlay'); if(ov) ov.style.display='none';
+      var sh=document.getElementById('appShell');     if(sh) sh.style.display='block';
       init();
-    }
-  }catch(e){}
+    }catch(e){ console.error('[Windmill] Boot failed:', e); }
+  }
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded', go);
+  } else {
+    go();
+  }
 })();
 function changePassword(){
   const cur=document.getElementById('s-cur-pass').value;
