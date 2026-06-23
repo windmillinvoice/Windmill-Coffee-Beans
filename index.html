@@ -528,12 +528,12 @@ main{padding:32px 40px;max-width:1700px;margin:0 auto}
 @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
 
 /* ===== PAGE HEADER ===== */
-.page-header{margin-bottom:24px}
-.page-title{font-family:var(--font-head);font-size:36px;color:var(--heading);font-weight:700;letter-spacing:-.3px;line-height:1.1;margin-bottom:4px}
-.page-sub{font-family:var(--font-body);font-size:13px;color:var(--muted);letter-spacing:.2px}
+.page-header{margin-bottom:14px}
+.page-title{font-family:var(--font-head);font-size:22px;color:var(--heading);font-weight:700;letter-spacing:-.2px;line-height:1.15;margin-bottom:2px}
+.page-sub{font-family:var(--font-body);font-size:11.5px;color:var(--muted);letter-spacing:.2px}
 
 /* ===== SUB HEADING (uppercase little section title with underline) ===== */
-.sub-heading{font-family:var(--font-body);font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:2.5px;font-weight:600;margin:24px 0 10px 0;padding-bottom:12px;border-bottom:1px solid var(--line)}
+.sub-heading{font-family:var(--font-body);font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:2.2px;font-weight:600;margin:20px 0 9px 0;padding-bottom:9px;border-bottom:1px solid var(--line)}
 
 /* ===== SECTION TITLE ===== */
 h2.section-title{font-family:var(--font-head);font-size:24px;color:var(--heading);margin:42px 0 20px 0;display:flex;align-items:center;gap:14px;font-weight:700;letter-spacing:-.2px;position:relative}
@@ -541,42 +541,52 @@ h2.section-title::before,h2.section-title::after{display:none}
 h3{font-family:var(--font-head);font-size:17px;color:var(--heading);margin-bottom:14px;font-weight:600;letter-spacing:0}
 
 /* ===== BEAN FLOW ===== */
-.flow-panel{padding:24px;margin-bottom:32px}
-.bean-flow{display:grid;grid-template-columns:1fr auto 1fr auto 1fr auto 1fr;gap:14px;align-items:center}
-.flow-card{background:var(--panel-3);border:1px solid var(--line);border-radius:14px;padding:24px 18px;text-align:center;transition:all .2s}
-.flow-card:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(58,44,30,.08)}
-.flow-val{font-family:var(--font-num);font-size:40px;font-weight:700;color:var(--green-2);line-height:1;margin-bottom:6px;letter-spacing:-.5px}
-.flow-lbl{font-family:var(--font-body);font-size:10.5px;color:var(--muted);letter-spacing:2.5px;font-weight:600}
+.flow-panel{padding:10px 14px;margin-bottom:16px}
+.bean-flow{display:grid;grid-template-columns:1fr auto 1fr auto 1fr auto 1fr;gap:8px;align-items:center}
+.flow-card{background:var(--panel-3);border:1px solid var(--line);border-radius:9px;padding:9px 8px;text-align:center;transition:transform .2s,box-shadow .2s}
+.flow-card:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(58,44,30,.07)}
+.flow-val{font-family:var(--font-num);font-size:19px;font-weight:700;color:var(--green-2);line-height:1;margin-bottom:2px;letter-spacing:-.4px;font-variant-numeric:tabular-nums}
+.flow-lbl{font-family:var(--font-body);font-size:8.5px;color:var(--muted);letter-spacing:1.4px;font-weight:600}
 .flow-card.hero{background:var(--coffee-mid);border-color:var(--coffee)}
 .flow-card.hero .flow-val{color:#f5ecd5}
 .flow-card.hero .flow-lbl{color:rgba(245,236,213,.7)}
-.flow-arrow{font-size:22px;color:var(--muted);opacity:.5;font-weight:300}
+.flow-arrow{font-size:14px;color:var(--muted);opacity:.4;font-weight:300}
 @media(max-width:900px){.bean-flow{grid-template-columns:1fr;gap:10px}.flow-arrow{transform:rotate(90deg)}}
 
 /* ===== STOCK BY ORIGIN ===== */
-.stock-grid{display:grid;grid-template-columns:1fr 1fr;gap:32px;margin-bottom:32px}
+.stock-grid{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-bottom:22px}
 @media(max-width:900px){.stock-grid{grid-template-columns:1fr;gap:16px}}
-.stock-panel{padding:22px 24px}
-.stock-bars{display:flex;flex-direction:column;gap:14px}
-.stock-bar-row{display:grid;grid-template-columns:90px 1fr 70px;align-items:center;gap:14px}
+.stock-panel{padding:20px 22px}
+.stock-bars{display:flex;flex-direction:column;gap:15px}
+.stock-bar-row{display:grid;grid-template-columns:96px 1fr 74px;align-items:center;gap:14px}
 .stock-bar-name{font-family:var(--font-body);font-size:14px;color:var(--text);font-weight:500}
-.stock-bar-track{height:8px;background:var(--tan-track);border-radius:4px;overflow:hidden;position:relative}
-.stock-bar-fill{height:100%;border-radius:4px;transition:width .5s cubic-bezier(.25,1,.5,1)}
+.stock-bar-track{height:11px;background:var(--tan-track);border-radius:6px;overflow:hidden;position:relative}
+.stock-bar-fill{height:100%;border-radius:6px;transition:width .5s cubic-bezier(.25,1,.5,1)}
 .stock-bar-fill.green{background:linear-gradient(90deg,var(--green-2) 0%,var(--green) 100%)}
 .stock-bar-fill.tan{background:linear-gradient(90deg,#8a5a2f 0%,var(--tan) 100%)}
-.stock-bar-val{font-family:var(--font-body);font-size:13px;color:var(--text);text-align:right;font-weight:500;font-variant-numeric:tabular-nums}
+.stock-bar-val{font-family:var(--font-body);font-size:14px;color:var(--text);text-align:right;font-weight:600;font-variant-numeric:tabular-nums}
 .stock-empty{font-family:var(--font-body);font-size:13px;color:var(--muted);text-align:center;padding:20px 0;font-style:normal;opacity:.7}
 
-/* ===== KPI GRID — clean cream cards with one hero dark card ===== */
-.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:32px}
-.kpi{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px 22px;position:relative;overflow:hidden;transition:all .25s;box-shadow:0 1px 2px rgba(58,44,30,.04)}
-.kpi:hover{transform:translateY(-2px);box-shadow:0 10px 28px rgba(58,44,30,.1);border-color:var(--gold)}
+/* ===== PRIMARY STOCK ZONE — the focal point of the dashboard ===== */
+.primary-zone{background:linear-gradient(180deg,rgba(176,142,74,.06) 0%,rgba(176,142,74,.01) 60%,transparent 100%);border:1px solid var(--line);border-radius:18px;padding:18px 20px 22px;margin-bottom:30px;box-shadow:0 3px 14px rgba(58,44,30,.06)}
+body.theme-dark .primary-zone{background:linear-gradient(180deg,rgba(245,236,213,.05) 0%,rgba(245,236,213,.01) 100%)}
+.primary-zone-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px;padding-bottom:13px;border-bottom:1px solid var(--line)}
+.primary-zone-title{font-family:var(--font-head);font-size:22px;color:var(--heading);font-weight:700;letter-spacing:-.2px;margin:0;display:flex;align-items:center;gap:10px}
+.primary-zone-tag{font-family:var(--font-body);font-size:10px;color:var(--gold);text-transform:uppercase;letter-spacing:1.6px;font-weight:700;background:rgba(176,142,74,.13);padding:5px 12px;border-radius:30px;white-space:nowrap}
+.stock-head{font-family:var(--font-head);font-size:15.5px;color:var(--heading);font-weight:700;letter-spacing:-.1px;margin:0 0 12px;display:flex;align-items:center;gap:9px}
+.stock-head .stock-head-ico{font-size:17px;opacity:.9}
+.primary-zone .store-balances-head{margin-top:6px}
+
+/* ===== KPI GRID — compact summary strip (secondary to the stock zone) ===== */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:14px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:11px 13px;position:relative;overflow:hidden;transition:transform .2s,box-shadow .2s,border-color .2s;box-shadow:0 1px 2px rgba(58,44,30,.04)}
+.kpi:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(58,44,30,.08);border-color:var(--gold)}
 .kpi::after,.kpi::before{display:none}
-.kpi-icon{font-size:22px;margin-bottom:14px;display:block;opacity:.85}
-.kpi-label{font-family:var(--font-body);font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1.8px;margin-bottom:10px;font-weight:600}
-.kpi-value{font-family:var(--font-num);font-size:38px;font-weight:700;color:var(--heading);line-height:1;letter-spacing:-.5px;font-feature-settings:"onum" 1}
-.kpi-unit{font-family:var(--font-body);font-size:13px;color:var(--muted);margin-left:3px;font-weight:400;letter-spacing:0}
-.kpi-sub{font-family:var(--font-body);font-size:12px;color:var(--muted);margin-top:10px;letter-spacing:.2px}
+.kpi-icon{font-size:13px;margin-bottom:5px;display:block;opacity:.7}
+.kpi-label{font-family:var(--font-body);font-size:8.5px;color:var(--muted);text-transform:uppercase;letter-spacing:1.2px;margin-bottom:4px;font-weight:600}
+.kpi-value{font-family:var(--font-num);font-size:21px;font-weight:700;color:var(--heading);line-height:1;letter-spacing:-.4px;font-feature-settings:"onum" 1;font-variant-numeric:tabular-nums}
+.kpi-unit{font-family:var(--font-body);font-size:10px;color:var(--muted);margin-left:2px;font-weight:400;letter-spacing:0}
+.kpi-sub{font-family:var(--font-body);font-size:9.5px;color:var(--muted);margin-top:4px;letter-spacing:.1px}
 /* Hero (dark) variant */
 .kpi.hero{background:var(--coffee-mid);border-color:var(--coffee);color:#f5ecd5}
 .kpi.hero .kpi-label{color:rgba(245,236,213,.75)}
@@ -1279,34 +1289,41 @@ body.theme-dark #alert-log-panel{box-shadow:0 16px 48px rgba(0,0,0,.45);}
     </div>
   </div>
 
-  <!-- STOCK BY ORIGIN -->
-  <div class="stock-grid">
-    <div>
-      <h3 class="sub-heading">GREEN BEAN STOCK — ALL STORES</h3>
-      <div class="panel stock-panel">
-        <div id="greenStockByOrigin" class="stock-bars"></div>
-      </div>
+  <!-- ░░ PRIMARY: STOCK OVERVIEW — main focus of the dashboard ░░ -->
+  <div class="primary-zone">
+    <div class="primary-zone-bar">
+      <h2 class="primary-zone-title">📊 Stock Overview</h2>
+      <span class="primary-zone-tag">● Live · all stores</span>
     </div>
-    <div>
-      <h3 class="sub-heading">ROASTED BEAN STOCK</h3>
-      <div class="panel stock-panel">
-        <div id="roastedStockByOrigin" class="stock-bars"></div>
-      </div>
-    </div>
-  </div>
 
-  <!-- Store Balances -->
-  <h2 class="section-title" style="justify-content:center;text-align:center">Store Green Bean Balances</h2>
-  <div class="store-toolbar">
-    <input type="text" id="storeSearch" class="store-toolbar-input" placeholder="🔍 Search store, origin or bean…" oninput="applyStoreCardView()" autocomplete="off"/>
-    <select id="storeSort" class="store-toolbar-select" onchange="applyStoreCardView()">
-      <option value="stock_desc">Stock: high → low</option>
-      <option value="stock_asc">Stock: low → high</option>
-      <option value="name_asc">Name: A → Z</option>
-    </select>
-    <span id="storeSearchCount" class="store-toolbar-count"></span>
+    <div class="stock-grid">
+      <div>
+        <h3 class="stock-head"><span class="stock-head-ico">🌿</span> Green Bean Stock — All Stores</h3>
+        <div class="panel stock-panel">
+          <div id="greenStockByOrigin" class="stock-bars"></div>
+        </div>
+      </div>
+      <div>
+        <h3 class="stock-head"><span class="stock-head-ico">☕</span> Roasted Bean Stock</h3>
+        <div class="panel stock-panel">
+          <div id="roastedStockByOrigin" class="stock-bars"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Store Balances -->
+    <h3 class="stock-head store-balances-head"><span class="stock-head-ico">🏬</span> Store Green Bean Balances</h3>
+    <div class="store-toolbar">
+      <input type="text" id="storeSearch" class="store-toolbar-input" placeholder="🔍 Search store, origin or bean…" oninput="applyStoreCardView()" autocomplete="off"/>
+      <select id="storeSort" class="store-toolbar-select" onchange="applyStoreCardView()">
+        <option value="stock_desc">Stock: high → low</option>
+        <option value="stock_asc">Stock: low → high</option>
+        <option value="name_asc">Name: A → Z</option>
+      </select>
+      <span id="storeSearchCount" class="store-toolbar-count"></span>
+    </div>
+    <div class="stores-grid" id="dashboardStores"></div>
   </div>
-  <div class="stores-grid" id="dashboardStores"></div>
 
   <!-- Origin Breakdown -->
   <h2 class="section-title">Green Beans by Origin</h2>
@@ -1322,7 +1339,7 @@ body.theme-dark #alert-log-panel{box-shadow:0 16px 48px rgba(0,0,0,.45);}
       <h3>Recent Roasting Batches</h3>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Date</th><th>Origin</th><th>In</th><th>Out</th><th>Waste%</th></tr></thead>
+          <thead><tr><th>Date</th><th>Origin</th><th>Finished Product</th><th>In</th><th>Out</th><th>Waste%</th></tr></thead>
           <tbody id="recentRoasting"></tbody>
         </table>
       </div>
@@ -4023,9 +4040,10 @@ function renderRoasting(){
     const totalOut=records.reduce((s,r)=>s+r.outKg,0);
     const totalWaste=records.reduce((s,r)=>s+r.wasteKg,0);
     const avgWaste=totalIn>0?(totalWaste/totalIn)*100:0;
+    const prodNames=[...new Set(records.map(r=>r.finishedProduct).filter(Boolean))];
     return `<div class="origin-section">
       <div class="origin-section-header">
-        <div class="origin-section-title">${getOriginEmoji(origin)} ${escapeHtml(origin)} — Roasting Output</div>
+        <div class="origin-section-title">${getOriginEmoji(origin)} ${escapeHtml(origin)} — Roasting Output${prodNames.length?`<div style="font-size:12px;font-weight:600;color:var(--teal,#5a9080);margin-top:5px;letter-spacing:.2px">☕ ${prodNames.map(escapeHtml).join(' &nbsp;•&nbsp; ')}</div>`:''}</div>
         <div class="origin-kpis">
           <div class="origin-kpi-chip"><div class="origin-kpi-chip-val text-gold">${fmt(totalIn)} kg</div><div class="origin-kpi-chip-lbl">Green In</div></div>
           <div class="origin-kpi-chip"><div class="origin-kpi-chip-val text-green">${fmt(totalOut)} kg</div><div class="origin-kpi-chip-lbl">Roasted Out</div></div>
@@ -4853,10 +4871,11 @@ function renderKPIs(){
   // Recent tables
   const recRoast=document.getElementById('recentRoasting');
   recRoast.innerHTML=data.roasting.length===0
-    ?'<tr class="empty-row"><td colspan="5">No roasting yet</td></tr>'
+    ?'<tr class="empty-row"><td colspan="6">No roasting yet</td></tr>'
     :data.roasting.slice(0,6).map(r=>`<tr>
       <td>${formatDate(r.date)}</td>
       <td class="small"><strong>${escapeHtml((r.sourceOrigin||'').slice(0,22))}</strong></td>
+      <td class="small">${r.finishedProduct?`<span class="badge green">${escapeHtml(r.finishedProduct)}</span>`:'<span class="text-muted">—</span>'}</td>
       <td>${fmt(r.inKg)} kg</td>
       <td class="text-green">${fmt(r.outKg)} kg</td>
       <td><span class="badge ${r.wastePct>15?'red':r.wastePct<10?'green':'gold'}">${r.wastePct.toFixed(1)}%</span></td>
@@ -5204,9 +5223,10 @@ function renderRepRoastByOrigin(filtered,from,to){
     const tOut=records.reduce((s,r)=>s+r.outKg,0);
     const tWaste=records.reduce((s,r)=>s+r.wasteKg,0);
     const avgW=tIn>0?(tWaste/tIn)*100:0;
+    const prodNames=[...new Set(records.map(r=>r.finishedProduct).filter(Boolean))];
     return `<div class="panel">
       <div class="flex-between" style="margin-bottom:16px">
-        <h3 class="mb-0">${getOriginEmoji(origin)} ${escapeHtml(origin)}</h3>
+        <h3 class="mb-0">${getOriginEmoji(origin)} ${escapeHtml(origin)}${prodNames.length?`<div style="font-size:12px;font-weight:600;color:var(--teal,#5a9080);margin-top:5px">☕ ${prodNames.map(escapeHtml).join(' &nbsp;•&nbsp; ')}</div>`:''}</h3>
         <div style="display:flex;gap:10px;flex-wrap:wrap">
           <span class="badge gold">${fmt(tIn)} kg in</span>
           <span class="badge green">${fmt(tOut)} kg out</span>
