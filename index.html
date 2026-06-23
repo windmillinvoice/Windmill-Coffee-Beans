@@ -657,7 +657,15 @@ h3{font-family:var(--font-head);font-size:17px;color:var(--heading);margin-botto
 .origin-stores{margin-top:10px;display:flex;flex-wrap:wrap;gap:6px}
 
 /* ===== STORE CARDS — share design tokens with origin cards ===== */
+.store-toolbar{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:10px;margin:0 auto 18px;max-width:760px}
+.store-toolbar-input{flex:1 1 280px;min-width:200px;padding:10px 14px;border:1.5px solid var(--line);border-radius:12px;background:var(--panel);color:var(--heading);font-size:14px;font-family:inherit}
+.store-toolbar-input:focus{outline:none;border-color:var(--green-2)}
+.store-toolbar-select{padding:10px 12px;border:1.5px solid var(--line);border-radius:12px;background:var(--panel);color:var(--heading);font-size:14px;font-family:inherit;cursor:pointer}
+.store-toolbar-select:focus{outline:none;border-color:var(--green-2)}
+.store-toolbar-count{font-size:12px;color:var(--muted);white-space:nowrap}
+.store-card.hidden-by-search{display:none !important}
 .stores-grid{display:flex;flex-wrap:wrap;justify-content:center;gap:var(--card-gap);margin-bottom:28px}
+.stores-grid .stores-empty-search{width:100%;text-align:center;color:var(--muted);font-size:13px;padding:24px}
 .store-card{width:430px;flex-shrink:0;flex-grow:0;background:var(--panel);border:1px solid var(--line);border-radius:var(--card-radius);padding:var(--card-padding);position:relative;overflow:hidden;transition:all .2s;box-shadow:var(--card-shadow);display:flex;flex-direction:column}
 .store-card:hover{transform:translateY(-2px);border-color:var(--gold);box-shadow:var(--card-shadow-hover)}
 .store-card::before{display:none}
@@ -1290,6 +1298,15 @@ body.theme-dark #alert-log-panel{box-shadow:0 16px 48px rgba(0,0,0,.45);}
 
   <!-- Store Balances -->
   <h2 class="section-title" style="justify-content:center;text-align:center">Store Green Bean Balances</h2>
+  <div class="store-toolbar">
+    <input type="text" id="storeSearch" class="store-toolbar-input" placeholder="🔍 Search store, origin or bean…" oninput="applyStoreCardView()" autocomplete="off"/>
+    <select id="storeSort" class="store-toolbar-select" onchange="applyStoreCardView()">
+      <option value="stock_desc">Stock: high → low</option>
+      <option value="stock_asc">Stock: low → high</option>
+      <option value="name_asc">Name: A → Z</option>
+    </select>
+    <span id="storeSearchCount" class="store-toolbar-count"></span>
+  </div>
   <div class="stores-grid" id="dashboardStores"></div>
 
   <!-- Origin Breakdown -->
@@ -4466,8 +4483,8 @@ function renderDashboardStores(){
   });
 
   grid.innerHTML=storesWithBal.map(s=>{
-    // Raw batches in this store — keep ALL batches that ever had kg, including
-    // ones fully drawn down, so the original "received" total stays visible.
+    // Raw batches in this store. Batches whose stock has fully left the store
+    // (transferred out / drawn down) are hidden below once their holdings hit zero.
     const batchesHere=data.greenBeans
       .filter(g=>g.storeId===s.id && (g.kg>0))
       .sort((a,b)=>b.kg-a.kg);
@@ -4492,14 +4509,17 @@ function renderDashboardStores(){
     const batchBlocks = batchesHere.map(g=>{
       const productionsFromThisBatch = productionsByBatch[g.id] || {};
       const totalProduced = Object.values(productionsFromThisBatch).reduce((a,b)=>a+b,0);
+      // Current holdings of this batch = raw still here + what was turned into
+      // variations. Anything transferred out has already left this store, so it is
+      // NOT counted here — that's why no "drift" is reported for a clean transfer.
       const accounted = g.remaining + totalProduced;
-      const drift = Math.abs(g.kg - accounted);
+
+      // Nothing left in this store for this batch (fully transferred / drawn down) → hide it.
+      if(accounted<=0.01) return '';
 
       const childRows = [];
-      childRows.push(`<div class="store-batch-child">
-        <span>↳ 🌿 Raw remaining</span>
-        <span>${fmt(g.remaining)} kg</span>
-      </div>`);
+      // Only show variation breakdown rows. The "Raw remaining" line is intentionally
+      // omitted — the head figure already reflects what is physically in this store.
       Object.entries(productionsFromThisBatch).sort((a,b)=>b[1]-a[1]).forEach(([prodName,kg])=>{
         childRows.push(`<div class="store-batch-child">
           <span>↳ ☕ ${escapeHtml(prodName)}</span>
@@ -4507,20 +4527,16 @@ function renderDashboardStores(){
         </div>`);
       });
 
-      const driftBadge = drift>0.01
-        ? ` <span class="badge red" style="font-size:10px">drift ${fmt(drift)}kg</span>`
-        : '';
-
       return `<div class="store-batch-block">
         <div class="store-batch-head">
-          <span>${getOriginEmoji(g.origin)} ${escapeHtml(g.origin)}${g.beanName?' – '+escapeHtml(g.beanName):''}${g.batch?` <span class="text-muted small" style="font-weight:400">[${escapeHtml(g.batch)}]</span>`:''}${driftBadge}</span>
-          <span class="text-gold">${fmt(g.kg)} kg</span>
+          <span>${getOriginEmoji(g.origin)} ${escapeHtml(g.origin)}${g.beanName?' – '+escapeHtml(g.beanName):''}${g.batch?` <span class="text-muted small" style="font-weight:400">[${escapeHtml(g.batch)}]</span>`:''}</span>
+          <span class="text-gold">${fmt(accounted)} kg</span>
         </div>
         ${childRows.join('')}
       </div>`;
     }).join('');
 
-    return `<div class="store-card">
+    return `<div class="store-card" data-store-name="${escapeHtml(String(s.name||'').toLowerCase())}" data-store-total="${totalNow}">
       <div class="store-card-header">
         <div>
           <div class="store-name">🏪 ${escapeHtml(s.name)}</div>
@@ -4530,7 +4546,7 @@ function renderDashboardStores(){
       </div>
       <div class="store-stats">
         <div class="store-stat balance">
-          <div class="store-stat-val">${fmt(totalReceived)}<span style="font-size:12px;color:var(--muted)"> kg</span></div>
+          <div class="store-stat-val">${fmt(totalNow)}<span style="font-size:12px;color:var(--muted)"> kg</span></div>
           <div class="store-stat-lbl">Total Stock</div>
         </div>
         <div class="store-stat status-val">
@@ -4548,6 +4564,50 @@ function renderDashboardStores(){
         : '<div style="margin-top:10px;font-size:12px;color:var(--muted);border-top:1px solid var(--line);padding-top:10px;text-align:center">No stock assigned</div>'}
     </div>`;
   }).join('');
+
+  // Re-apply any active search/sort once the cards are (re)rendered.
+  applyStoreCardView();
+}
+
+/* ===== STORE CARD SEARCH + SORT (front-end only, no data changes) ===== */
+function applyStoreCardView(){
+  const grid=document.getElementById('dashboardStores');
+  if(!grid)return;
+  const q=(document.getElementById('storeSearch')?.value||'').trim().toLowerCase();
+  const sort=document.getElementById('storeSort')?.value||'stock_desc';
+  const countEl=document.getElementById('storeSearchCount');
+
+  // Remove any previous "no matches" placeholder before recalculating.
+  grid.querySelectorAll('.stores-empty-search').forEach(n=>n.remove());
+
+  const cards=Array.from(grid.querySelectorAll('.store-card'));
+  let visible=0;
+  cards.forEach(card=>{
+    // Match against everything visible in the card (store name, location, origins, beans).
+    const hay=(card.dataset.storeName||'')+' '+card.textContent.toLowerCase();
+    const match = q==='' || hay.includes(q);
+    card.classList.toggle('hidden-by-search', !match);
+    if(match)visible++;
+  });
+
+  // Sort the (matching) cards and re-append in order.
+  const cmp={
+    stock_desc:(a,b)=>(parseFloat(b.dataset.storeTotal)||0)-(parseFloat(a.dataset.storeTotal)||0),
+    stock_asc :(a,b)=>(parseFloat(a.dataset.storeTotal)||0)-(parseFloat(b.dataset.storeTotal)||0),
+    name_asc  :(a,b)=>(a.dataset.storeName||'').localeCompare(b.dataset.storeName||'')
+  }[sort]||null;
+  if(cmp){ cards.slice().sort(cmp).forEach(c=>grid.appendChild(c)); }
+
+  if(countEl){
+    countEl.textContent = q==='' ? `${cards.length} store${cards.length===1?'':'s'}`
+                                 : `${visible} of ${cards.length} match`;
+  }
+  if(visible===0 && cards.length>0){
+    const empty=document.createElement('div');
+    empty.className='stores-empty-search';
+    empty.textContent='No stores match "'+q+'".';
+    grid.appendChild(empty);
+  }
 }
 
 function renderOriginCards(){
