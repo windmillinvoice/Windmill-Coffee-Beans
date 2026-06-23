@@ -1217,7 +1217,6 @@ body.theme-dark #alert-log-panel{box-shadow:0 16px 48px rgba(0,0,0,.45);}
   <button class="tab" data-page="greenbeans">Receiving</button>
   <button class="tab" data-page="movements">Movements</button>
   <button class="tab" data-page="roasting">Roasting</button>
-  <button class="tab" data-page="production">Production</button>
   <button class="tab" data-page="reports">Reports</button>
   <button class="tab" data-page="settings">Settings</button>
 </nav>
@@ -1452,6 +1451,16 @@ body.theme-dark #alert-log-panel{box-shadow:0 16px 48px rgba(0,0,0,.45);}
       <div><label>Roasted Out (kg)</label><input type="number" id="r-out" placeholder="88" step="0.1" min="0" oninput="autoCalcWaste()"/></div>
       <div><label>Wastage (auto)</label><input type="text" id="r-waste-display" readonly placeholder="—"/></div>
     </div>
+    <div class="form-row">
+      <div>
+        <label>Finished Product <span class="text-muted small">(what this roast becomes)</span></label>
+        <select id="r-finished-sel" onchange="handleFinishedSel(this.value)">
+          <option value="">— Select Finished Product —</option>
+          <option value="__new__">+ Add New Finished Product</option>
+        </select>
+      </div>
+      <div id="r-finished-new-wrap" style="display:none"><label>New Finished Product</label><input type="text" id="r-finished-new" placeholder="e.g. Cerrado Medium Roast"/></div>
+    </div>
     <div class="form-row full"><div><label>Notes</label><textarea id="r-notes" placeholder="Moisture, roast time, color..."></textarea></div></div>
     <div class="btn-row">
       <button class="btn" id="saveRoastBtn" onclick="addRoasting()">💾 Save Roasting Batch</button>
@@ -1571,90 +1580,7 @@ body.theme-dark #alert-log-panel{box-shadow:0 16px 48px rgba(0,0,0,.45);}
   </div>
 </section>
 
-<!-- ===== PRODUCTION (RAW → FINISHED) ===== -->
-<section class="page" id="page-production">
-  <h2 class="section-title">Production &mdash; Raw to Finished</h2>
-  <p class="text-muted small" style="margin-bottom:14px">
-    A <strong>production run</strong> transforms raw green beans into a finished product (flavoured, infused, or processed).
-    The kg you produce are <strong>subtracted from the raw batch</strong> and <strong>added to the finished product's stock</strong>.
-    Total kilograms are conserved &mdash; nothing is duplicated.
-  </p>
-
-  <div class="panel">
-    <h3>Run a Production Batch</h3>
-    <div class="form-row three">
-      <div><label>Production Date</label><input type="date" id="pd-date"/></div>
-      <div>
-        <label>Raw Source (Green Bean Batch)</label>
-        <select id="pd-source"><option value="">— Select raw batch —</option></select>
-        <div id="pd-source-info" class="text-muted small" style="margin-top:6px;min-height:18px"></div>
-      </div>
-      <div>
-        <label>Finished Product</label>
-        <select id="pd-product-sel" onchange="handlePdProductSel(this.value)">
-          <option value="">— Select or add product —</option>
-          <option value="__new__">+ Add New Finished Product</option>
-        </select>
-        <div id="pd-product-new-wrap" style="display:none;margin-top:8px">
-          <input type="text" id="pd-product-new" placeholder="e.g. Colombia Blueberry" autocomplete="off"/>
-        </div>
-      </div>
-    </div>
-
-    <div class="form-row three">
-      <div>
-        <label>Quantity to Produce (kg)</label>
-        <input type="number" id="pd-kg" placeholder="e.g. 50" min="0" step="0.1" oninput="updatePdHint()"/>
-      </div>
-      <div>
-        <label>Raw Available</label>
-        <input type="text" id="pd-available" readonly placeholder="—" style="background:rgba(176,142,74,.06);font-weight:600"/>
-      </div>
-      <div>
-        <label>Raw Remaining After</label>
-        <input type="text" id="pd-after" readonly placeholder="—" style="background:rgba(176,142,74,.06);font-weight:600"/>
-      </div>
-    </div>
-
-    <!-- Visual preview of the transformation -->
-    <div id="pd-flow-preview" class="calc-display" style="margin-top:14px;display:none">
-      <div class="calc-cell">
-        <div class="calc-cell-label">Raw In</div>
-        <div class="calc-cell-value" id="pd-flow-raw">—</div>
-      </div>
-      <div class="calc-arrow">→</div>
-      <div class="calc-cell out">
-        <div class="calc-cell-label">Finished Out</div>
-        <div class="calc-cell-value" id="pd-flow-finished">—</div>
-      </div>
-    </div>
-
-    <div class="form-row full">
-      <div>
-        <label>Notes (optional)</label>
-        <textarea id="pd-notes" placeholder="Process details, infusion method, batch tag..."></textarea>
-      </div>
-    </div>
-    <div class="btn-row">
-      <button class="btn" onclick="addProduction()">💾 Run Production</button>
-      <button class="btn btn-secondary" onclick="clearPdForm()">Clear</button>
-    </div>
-  </div>
-
-  <!-- Finished Product Inventory -->
-  <h2 class="section-title">Finished Product Inventory</h2>
-  <p class="text-muted small" style="margin-bottom:14px">
-    Live stock balances for every finished product. Each card shows the current remaining quantity, total ever produced, and the raw batches it was made from.
-  </p>
-  <div id="finishedProductsBlock"></div>
-
-  <!-- Production Log -->
-  <h2 class="section-title" style="margin-top:30px">Production Log</h2>
-  <p class="text-muted small" style="margin-bottom:14px">
-    Audit trail of every production run. Removing a record <strong>restores raw kg</strong> and <strong>deducts finished kg</strong>. Deletion is blocked if it would push finished stock negative.
-  </p>
-  <div id="productionSections"></div>
-</section>
+<!-- ===== PRODUCTION PAGE REMOVED — finished-product tracking now lives in the Roasting Log ===== -->
 
 <!-- ===== REPORTS & EXPORT ===== -->
 <section class="page" id="page-reports">
@@ -1961,6 +1887,20 @@ body.theme-dark #alert-log-panel{box-shadow:0 16px 48px rgba(0,0,0,.45);}
         <button class="btn btn-sm" onclick="addBeanName()">+ Add Bean Name</button>
       </div>
     </div>
+
+    <!-- FINISHED PRODUCTS -->
+    <div class="inv-block">
+      <div class="inv-block-header">
+        <h4>☕ Finished Products</h4>
+        <span class="inv-count" id="finishedProductsCount">0</span>
+      </div>
+      <p class="text-muted small" style="margin:-6px 0 12px">Names that appear in the <strong>Finished Product</strong> dropdown of the Roasting Log (e.g. coffee origins, bean names, roast styles).</p>
+      <div id="finishedProductsList" class="inv-chip-list"></div>
+      <div class="inv-add-row">
+        <input type="text" id="newFinishedProductInput" placeholder="e.g. Cerrado Medium Roast, Colombia Blueberry..."/>
+        <button class="btn btn-sm" onclick="addFinishedProductName()">+ Add Finished Product</button>
+      </div>
+    </div>
   </div>
 
   <!-- TYPOGRAPHY -->
@@ -2262,7 +2202,7 @@ const defaultData={
   greenBeans:[],roasting:[],movements:[],productions:[],finishedProducts:[],
   stores:[{id:'s1',name:'Store 1',location:'Branch 1',safetyStock:10},{id:'s2',name:'Store 2',location:'Branch 2',safetyStock:10}],
   lowThreshold:5,
-  knownOrigins:[],knownSuppliers:[],knownBeanNames:[],
+  knownOrigins:[],knownSuppliers:[],knownBeanNames:[],finishedProductNames:[],
   roastLevels:['Light','Medium-Light','Medium','Medium-Dark','Dark','Espresso'],
   defaultRoastingStoreId:'',  // Rule A: locked roasting store
   prefs:{theme:'cream',fontNum:"'Playfair Display',serif",fontBody:"'Inter',sans-serif",fontScale:'1',role:'Storekeeper',accent:'coffee',customColors:null}
@@ -2306,6 +2246,12 @@ function mergeData(p){
     merged.knownSuppliers=[...new Set(merged.greenBeans.map(g=>g.supplier).filter(Boolean))];
   if(!merged.knownBeanNames)
     merged.knownBeanNames=[...new Set(merged.greenBeans.map(g=>g.beanName).filter(Boolean))];
+  if(!merged.finishedProductNames||merged.finishedProductNames.length===0){
+    const _fpn=new Set();
+    (merged.roasting||[]).forEach(r=>{if(r.finishedProduct)_fpn.add(String(r.finishedProduct).trim());});
+    (merged.finishedProducts||[]).forEach(p=>{if(p.name)_fpn.add(String(p.name).trim());});
+    merged.finishedProductNames=[..._fpn].filter(Boolean).sort();
+  }
 
   // ─── Backfill storeId on finished products from older saves ─────────
   // Earlier versions stored finished products without a storeId. Look at
@@ -2646,10 +2592,25 @@ function renderInventoryLists(){
           <button class="chip-remove" onclick="removeBeanName('${escapeHtml(b).replace(/'/g,"\\'")}')" title="Remove bean name">✕</button>
         </div>`).join('');
   }
+  // Finished Products
+  const fList=document.getElementById('finishedProductsList');
+  const fCount=document.getElementById('finishedProductsCount');
+  if(fList){
+    if(!data.finishedProductNames)data.finishedProductNames=[];
+    fCount.textContent=data.finishedProductNames.length;
+    fList.innerHTML=data.finishedProductNames.length===0
+      ?'<p class="inv-empty">No finished products yet — add your first one below.</p>'
+      :data.finishedProductNames.map(f=>`
+        <div class="inv-chip">
+          <span>☕ ${escapeHtml(f)}</span>
+          <button class="chip-remove" onclick="removeFinishedProductName('${escapeHtml(f).replace(/'/g,"\\'")}')" title="Remove finished product">✕</button>
+        </div>`).join('');
+  }
   // Refresh dropdowns used in the Log New Delivery form
   refreshOriginDropdown();
   refreshSupplierDropdown();
   refreshBeanNameDropdown();
+  refreshFinishedNameDropdown();
 }
 function addOrigin(){
   const input=document.getElementById('newOriginInput');
@@ -2705,6 +2666,44 @@ function removeBeanName(name){
   toast(`Removed bean name: ${name}`,'warn');
 }
 
+/* ===== FINISHED PRODUCT NAMES (used by the Roasting Log) ===== */
+function addFinishedProductName(){
+  const input=document.getElementById('newFinishedProductInput');
+  if(!input)return;
+  const val=input.value.trim();
+  if(!val){toast('Enter a finished product name','error');return;}
+  if(!data.finishedProductNames)data.finishedProductNames=[];
+  if(data.finishedProductNames.includes(val)){toast('That finished product already exists','error');return;}
+  data.finishedProductNames.push(val);data.finishedProductNames.sort();
+  saveData();input.value='';renderInventoryLists();
+  toast(`Added finished product: ${val}`);
+}
+function removeFinishedProductName(name){
+  const inUse=(data.roasting||[]).some(r=>r.finishedProduct===name);
+  const msg=inUse
+    ?`"${name}" is used in ${data.roasting.filter(r=>r.finishedProduct===name).length} roasting record(s). Those records keep the name, but it will be removed from the dropdown. Continue?`
+    :`Remove finished product "${name}" from the list?`;
+  if(!confirm(msg))return;
+  data.finishedProductNames=(data.finishedProductNames||[]).filter(f=>f!==name);
+  saveData();renderInventoryLists();
+  toast(`Removed finished product: ${name}`,'warn');
+}
+function refreshFinishedNameDropdown(){
+  const sel=document.getElementById('r-finished-sel');
+  if(!sel)return;
+  const cur=sel.value;
+  if(!data.finishedProductNames)data.finishedProductNames=[];
+  sel.innerHTML='<option value="">— Select Finished Product —</option>'+
+    data.finishedProductNames.map(f=>`<option value="${escapeHtml(f)}">${escapeHtml(f)}</option>`).join('')+
+    '<option value="__new__">+ Add New Finished Product</option>';
+  // keep current selection if it still exists
+  if(cur&&(cur==='__new__'||data.finishedProductNames.includes(cur)))sel.value=cur;
+}
+function handleFinishedSel(val){
+  const wrap=document.getElementById('r-finished-new-wrap');
+  if(wrap)wrap.style.display=(val==='__new__')?'block':'none';
+}
+
 function refreshBeanNameDropdown(){
   const sel=document.getElementById('gb-bean-name-sel');
   if(!sel)return;
@@ -2752,7 +2751,8 @@ function getWeekNumber(dateStr){
 function getMonthKey(dateStr){const d=new Date(dateStr+'T00:00:00');return`${d.toLocaleString('en-GB',{month:'long'})} ${d.getFullYear()}`;}
 
 /* ===== TABS ===== */
-function showTab(page){
+let _settingsUnlocked=false;
+function _activateTab(page){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   const btn=document.querySelector(`.tab[data-page="${page}"]`);
@@ -2760,6 +2760,21 @@ function showTab(page){
   const pg=document.getElementById('page-'+page);
   if(pg)pg.classList.add('active');
   renderAll();
+}
+function showTab(page){
+  // 🔒 Settings is password-protected — require the admin password each time it's opened
+  if(page==='settings'){
+    if(!_settingsUnlocked){
+      requirePassword('🔒 Settings Locked','Enter the admin password to open Settings.',()=>{
+        _settingsUnlocked=true;
+        _activateTab('settings');
+      });
+      return; // stay on current tab until the correct password is entered
+    }
+  }else{
+    _settingsUnlocked=false; // re-lock Settings whenever the user navigates away
+  }
+  _activateTab(page);
 }
 document.querySelectorAll('.tab').forEach(btn=>btn.addEventListener('click',()=>showTab(btn.dataset.page)));
 
@@ -3076,6 +3091,23 @@ function addRoasting(){
   const inKg=parseFloat(document.getElementById('r-in').value);
   const outKg=parseFloat(document.getElementById('r-out').value);
   const notes=document.getElementById('r-notes').value.trim();
+  // Finished Product — from managed dropdown, or a freshly-added name
+  let finishedProduct='';
+  const _fSel=document.getElementById('r-finished-sel');
+  if(_fSel){
+    if(_fSel.value==='__new__'){
+      const _fNew=document.getElementById('r-finished-new');
+      finishedProduct=(_fNew?_fNew.value:'').trim();
+      if(finishedProduct){
+        if(!data.finishedProductNames)data.finishedProductNames=[];
+        if(!data.finishedProductNames.includes(finishedProduct)){
+          data.finishedProductNames.push(finishedProduct);data.finishedProductNames.sort();
+        }
+      }
+    }else{
+      finishedProduct=_fSel.value.trim();
+    }
+  }
   if(!rawSourceId){toast('Select a green bean batch','error');return;}
   if(!inKg||inKg<=0){toast('Enter green beans in (kg)','error');return;}
   if(isNaN(outKg)||outKg<0){toast('Enter roasted output (kg)','error');return;}
@@ -3118,7 +3150,7 @@ function addRoasting(){
       sourceBeanName:fp.name,
       storeId:fp.storeId||'',
       storeName:fp.storeName||'—',
-      level,inKg,outKg,wasteKg,wastePct,notes,available:outKg
+      level,inKg,outKg,wasteKg,wastePct,notes,finishedProduct,available:outKg
     });
     fp.remaining-=inKg;
     saveData();clearRForm();renderAll();
@@ -3139,7 +3171,7 @@ function addRoasting(){
     id:uid(),date,sourceId:rawSourceId,
     sourceName:`${source.origin}${source.beanName?' – '+source.beanName:''} (${source.supplier})`,
     sourceOrigin:source.origin,sourceBeanName:source.beanName||'',storeId:source.storeId,storeName:source.storeName||'—',
-    level,inKg,outKg,wasteKg,wastePct,notes,available:outKg
+    level,inKg,outKg,wasteKg,wastePct,notes,finishedProduct,available:outKg
   });
   source.remaining-=inKg;
   saveData();clearRForm();renderAll();
@@ -3147,8 +3179,10 @@ function addRoasting(){
 }
 function clearRForm(){
   document.getElementById('r-date').value=todayISO();
-  ['r-in','r-out','r-waste-display','r-notes'].forEach(i=>document.getElementById(i).value='');
+  ['r-in','r-out','r-waste-display','r-notes','r-finished-new'].forEach(i=>{const el=document.getElementById(i);if(el)el.value='';});
   document.getElementById('r-source').value='';
+  const fSel=document.getElementById('r-finished-sel');if(fSel)fSel.value='';
+  const fWrap=document.getElementById('r-finished-new-wrap');if(fWrap)fWrap.style.display='none';
 }
 function deleteRoasting(id){
   const r=data.roasting.find(x=>x.id===id);
@@ -3944,6 +3978,11 @@ function _doEditRoasting(id){
     </select></div></div>
     <div class="form-row"><div><label>Green In (kg)</label><input type="number" id="em-r-in" value="${r.inKg}" step="0.1"/></div>
     <div><label>Roasted Out (kg)</label><input type="number" id="em-r-out" value="${r.outKg}" step="0.1"/></div></div>
+    <div class="form-row full"><div><label>Finished Product</label><select id="em-r-finished">
+      <option value=""${!r.finishedProduct?' selected':''}>— None —</option>
+      ${(data.finishedProductNames||[]).map(f=>`<option value="${escapeHtml(f)}"${f===r.finishedProduct?' selected':''}>${escapeHtml(f)}</option>`).join('')}
+      ${(r.finishedProduct&&!(data.finishedProductNames||[]).includes(r.finishedProduct))?`<option value="${escapeHtml(r.finishedProduct)}" selected>${escapeHtml(r.finishedProduct)}</option>`:''}
+    </select></div></div>
     <div class="form-row full"><div><label>Notes</label><textarea id="em-r-notes">${escapeHtml(r.notes||'')}</textarea></div></div>
     <p class="text-muted small">⚠ Changing kg values here does not retroactively adjust green bean stock.</p>
   `;
@@ -3954,6 +3993,7 @@ function _doEditRoasting(id){
     const no_=parseFloat(document.getElementById('em-r-out').value)||r.outKg;
     r.inKg=ni;r.outKg=no_;r.wasteKg=ni-no_;r.wastePct=ni>0?((ni-no_)/ni)*100:0;
     r.notes=document.getElementById('em-r-notes').value.trim();
+    const emF=document.getElementById('em-r-finished');if(emF)r.finishedProduct=emF.value.trim();
     saveData();renderAll();closeEditModal();toast('Roasting record updated');
   };
   document.getElementById('editModal').classList.add('show');
@@ -3961,6 +4001,7 @@ function _doEditRoasting(id){
 
 function renderRoasting(){
   refreshRoastingSourceDropdown();
+  refreshFinishedNameDropdown();
   // Roasting Output by Origin
   const roastContainer=document.getElementById('roastOriginSections');
   const wasteContainer=document.getElementById('wasteOriginSections');
@@ -3995,11 +4036,12 @@ function renderRoasting(){
       <div class="origin-section-body">
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Date</th><th>Bean / Batch</th><th>Level</th><th>Green In</th><th>Roasted Out</th><th>Wastage</th><th>Waste%</th><th>Available</th><th>Actions</th></tr></thead>
+            <thead><tr><th>Date</th><th>Bean / Batch</th><th>Finished Product</th><th>Level</th><th>Green In</th><th>Roasted Out</th><th>Wastage</th><th>Waste%</th><th>Available</th><th>Actions</th></tr></thead>
             <tbody>${records.map(r=>`
               <tr>
                 <td>${formatDate(r.date)}</td>
                 <td class="small">${escapeHtml(r.sourceBeanName||r.sourceName||'').slice(0,30)}</td>
+                <td class="small">${r.finishedProduct?`<span class="badge green">${escapeHtml(r.finishedProduct)}</span>`:'<span class="text-muted">—</span>'}</td>
                 <td><span class="badge gold">${escapeHtml(r.level)}</span></td>
                 <td>${fmt(r.inKg)} kg</td>
                 <td class="text-green">${fmt(r.outKg)} kg</td>
@@ -5173,8 +5215,8 @@ function renderRepRoastByOrigin(filtered,from,to){
         </div>
       </div>
       <div class="table-wrap"><table>
-        <thead><tr><th>Date</th><th>Level</th><th>Green In</th><th>Roasted Out</th><th>Waste</th><th>Waste%</th></tr></thead>
-        <tbody>${records.map(r=>`<tr><td>${formatDate(r.date)}</td><td>${escapeHtml(r.level)}</td><td>${fmt(r.inKg)} kg</td><td class="text-green">${fmt(r.outKg)} kg</td><td class="text-red">${fmt(r.wasteKg)} kg</td><td><span class="badge ${r.wastePct>15?'red':r.wastePct<10?'green':'gold'}">${r.wastePct.toFixed(1)}%</span></td></tr>`).join('')}
+        <thead><tr><th>Date</th><th>Finished Product</th><th>Level</th><th>Green In</th><th>Roasted Out</th><th>Waste</th><th>Waste%</th></tr></thead>
+        <tbody>${records.map(r=>`<tr><td>${formatDate(r.date)}</td><td>${r.finishedProduct?`<span class="badge green">${escapeHtml(r.finishedProduct)}</span>`:'<span class="text-muted">—</span>'}</td><td>${escapeHtml(r.level)}</td><td>${fmt(r.inKg)} kg</td><td class="text-green">${fmt(r.outKg)} kg</td><td class="text-red">${fmt(r.wasteKg)} kg</td><td><span class="badge ${r.wastePct>15?'red':r.wastePct<10?'green':'gold'}">${r.wastePct.toFixed(1)}%</span></td></tr>`).join('')}
         </tbody>
       </table></div>
     </div>`;
@@ -5257,9 +5299,9 @@ function exportCSV(type){
     const byOrigin={};
     filtered.forEach(r=>{if(!byOrigin[r.sourceOrigin])byOrigin[r.sourceOrigin]=[];byOrigin[r.sourceOrigin].push(r);});
     Object.entries(byOrigin).forEach(([origin,records])=>{
-      records.forEach(r=>rows.push([origin,r.date,r.sourceBeanName||'',r.level,fmt(r.inKg),fmt(r.outKg),fmt(r.wasteKg),r.wastePct.toFixed(1)+'%',r.storeName||'',r.notes||'']));
+      records.forEach(r=>rows.push([origin,r.date,r.sourceBeanName||'',r.finishedProduct||'',r.level,fmt(r.inKg),fmt(r.outKg),fmt(r.wasteKg),r.wastePct.toFixed(1)+'%',r.storeName||'',r.notes||'']));
     });
-    downloadCSV(`windmill-roasting-by-origin-${now}.csv`,rows,['Origin','Date','Bean Name','Level','Green In (kg)','Roasted Out (kg)','Waste (kg)','Waste %','Store','Notes']);
+    downloadCSV(`windmill-roasting-by-origin-${now}.csv`,rows,['Origin','Date','Bean Name','Finished Product','Level','Green In (kg)','Roasted Out (kg)','Waste (kg)','Waste %','Store','Notes']);
   }else if(type==='waste_origin'){
     const rows=[];
     const byOrigin={};
@@ -5276,8 +5318,8 @@ function exportCSV(type){
     data.greenBeans.forEach(g=>rows.push([g.date,g.origin,g.beanName||'',g.supplier,g.storeName||'',fmt(g.kg),fmt(g.remaining),g.batch||'']));
     rows.push(['','','','','','','','']);
     rows.push(['--- ROASTING RECORDS ---','','','','','','','']);
-    rows.push(['Date','Origin','Bean Name','Level','Green In (kg)','Roasted Out (kg)','Waste (kg)','Waste %']);
-    data.roasting.forEach(r=>rows.push([r.date,r.sourceOrigin,r.sourceBeanName||'',r.level,fmt(r.inKg),fmt(r.outKg),fmt(r.wasteKg),r.wastePct.toFixed(1)+'%']));
+    rows.push(['Date','Origin','Bean Name','Finished Product','Level','Green In (kg)','Roasted Out (kg)','Waste (kg)','Waste %']);
+    data.roasting.forEach(r=>rows.push([r.date,r.sourceOrigin,r.sourceBeanName||'',r.finishedProduct||'',r.level,fmt(r.inKg),fmt(r.outKg),fmt(r.wasteKg),r.wastePct.toFixed(1)+'%']));
     rows.push(['','','','','','','','']);
     rows.push(['--- STORE BALANCES ---','','','','','','','']);
     rows.push(['Store','Location','Current Balance (kg)','','','','','']);
