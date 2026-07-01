@@ -1746,6 +1746,8 @@ body.theme-dark #alert-log-panel{box-shadow:0 16px 48px rgba(0,0,0,.45);}
       <button class="export-btn" onclick="exportCSV('weekly')">🗓 Weekly</button>
       <button class="export-btn" onclick="exportCSV('monthly')">📆 Monthly</button>
       <button class="export-btn" onclick="exportCSV('stock')">📦 Stock Records</button>
+      <button class="export-btn" onclick="exportCSV('store_overview')">🏪 Store Stock Overview</button>
+      <button class="export-btn" onclick="exportCSV('stock_by_origin')">🌍 Stock by Origin</button>
       <button class="export-btn" onclick="exportCSV('roasting_origin')">🔥 Roasting by Origin</button>
       <button class="export-btn" onclick="exportCSV('waste_origin')">♻️ Waste by Origin</button>
       <button class="export-btn primary" onclick="exportCSV('all')">⬇ Full Export</button>
@@ -4528,59 +4530,83 @@ function renderStoresEdit(){
   document.getElementById('lowThreshold').value=data.lowThreshold;
 }
 
-/* ===== DASHBOARD RENDER ===== */
-function renderDashboardStores(){
-  const grid=document.getElementById('dashboardStores');
-  const storesWithBal=getAllStoreBalances();
-  if(storesWithBal.length===0){grid.innerHTML='<p class="text-muted">No stores configured.</p>';return;}
-
-  // Pre-build: for each raw batch id → list of {productName, kg} produced from it
+/* ===== SHARED: per-store batch grouping (used by dashboard cards AND CSV export) ===== */
+function buildProductionsByBatch(){
+  // For each raw batch id → {productName: kg} produced from it
   const productionsByBatch={};
   (data.productions||[]).forEach(p=>{
     const k=p.sourceId||'';
     if(!productionsByBatch[k])productionsByBatch[k]={};
     productionsByBatch[k][p.productName]=(productionsByBatch[k][p.productName]||0)+p.kg;
   });
+  return productionsByBatch;
+}
+function getStoreStockGroups(storeId, productionsByBatch){
+  productionsByBatch = productionsByBatch || buildProductionsByBatch();
+  // Raw batches in this store. Batches whose stock has fully left the store
+  // (transferred out / drawn down) are excluded once their holdings hit zero.
+  const batchesHere=data.greenBeans
+    .filter(g=>g.storeId===storeId && (g.kg>0))
+    .sort((a,b)=>b.kg-a.kg);
+
+  const totalReceived = batchesHere.reduce((x,g)=>x+g.kg, 0);
+
+  // Group batches by origin + bean + "base batch" (batch id with any trailing
+  // -TRF markers stripped) so a store→store transfer of an existing lot lands
+  // on the SAME line as the lot it came from, instead of showing as a second,
+  // duplicate-looking entry just because it's a different underlying record.
+  const groupsMap={};
+  const groupOrder=[];
+  batchesHere.forEach(g=>{
+    const baseBatch=String(g.batch||'').replace(/(-TRF)+$/i,'');
+    const key=String(g.origin||'').trim().toLowerCase()+'|'+String(g.beanName||'').trim().toLowerCase()+'|'+baseBatch.toLowerCase();
+    if(!groupsMap[key]){
+      groupsMap[key]={origin:g.origin,beanName:g.beanName,batch:baseBatch,remaining:0,productions:{}};
+      groupOrder.push(key);
+    }
+    const grp=groupsMap[key];
+    grp.remaining+=g.remaining;
+    const p=productionsByBatch[g.id]||{};
+    Object.entries(p).forEach(([prodName,kg])=>{grp.productions[prodName]=(grp.productions[prodName]||0)+kg;});
+  });
+
+  // Each group's "accounted" kg = raw remaining here + anything turned into variations.
+  const batchGroups=groupOrder.map(k=>groupsMap[k]).map(g=>{
+    const totalProduced=Object.values(g.productions).reduce((a,b)=>a+b,0);
+    return Object.assign(g,{totalProduced,accounted:g.remaining+totalProduced});
+  }).filter(g=>g.accounted>0.01);
+
+  const totalRawNow = batchGroups.reduce((x,g)=>x+g.remaining,0);
+  const totalFinishedFromHere = batchGroups.reduce((x,g)=>x+g.totalProduced,0);
+  const totalNow = totalRawNow + totalFinishedFromHere;
+
+  return {batchGroups, totalReceived, totalRawNow, totalFinishedFromHere, totalNow};
+}
+
+/* ===== DASHBOARD RENDER ===== */
+function renderDashboardStores(){
+  const grid=document.getElementById('dashboardStores');
+  const storesWithBal=getAllStoreBalances();
+  if(storesWithBal.length===0){grid.innerHTML='<p class="text-muted">No stores configured.</p>';return;}
+
+  const productionsByBatch=buildProductionsByBatch();
 
   grid.innerHTML=storesWithBal.map(s=>{
-    // Raw batches in this store. Batches whose stock has fully left the store
-    // (transferred out / drawn down) are hidden below once their holdings hit zero.
-    const batchesHere=data.greenBeans
-      .filter(g=>g.storeId===s.id && (g.kg>0))
-      .sort((a,b)=>b.kg-a.kg);
-
-    // Per-store totals across ALL batches (active + drawn-down)
-    const totalReceived = batchesHere.reduce((x,g)=>x+g.kg, 0);
-    const totalRawNow   = batchesHere.reduce((x,g)=>x+g.remaining, 0);
-    const totalFinishedFromHere = batchesHere.reduce((x,g)=>{
-      const p=productionsByBatch[g.id]||{};
-      return x + Object.values(p).reduce((a,b)=>a+b, 0);
-    }, 0);
+    const{batchGroups, totalRawNow, totalFinishedFromHere, totalNow}=getStoreStockGroups(s.id, productionsByBatch);
 
     const saf=s.safetyStock||0;
-    const totalNow = totalRawNow + totalFinishedFromHere;  // raw + variations = total stock owned
     const isEmpty=totalNow<=0;
     const isCritical=saf>0&&totalNow<saf;
     const isLow=totalNow<data.lowThreshold;
     const badgeClass=isEmpty?'red':isCritical?'red':isLow?'gold':'green';
     const badgeText=isEmpty?'Out of Stock':isCritical?'Below Safety':isLow?'Low Stock':'In Stock';
 
-    // Build per-batch breakdown: parent = batch.kg, children = remaining + each finished derivative
-    const batchBlocks = batchesHere.map(g=>{
-      const productionsFromThisBatch = productionsByBatch[g.id] || {};
-      const totalProduced = Object.values(productionsFromThisBatch).reduce((a,b)=>a+b,0);
-      // Current holdings of this batch = raw still here + what was turned into
-      // variations. Anything transferred out has already left this store, so it is
-      // NOT counted here — that's why no "drift" is reported for a clean transfer.
-      const accounted = g.remaining + totalProduced;
-
-      // Nothing left in this store for this batch (fully transferred / drawn down) → hide it.
-      if(accounted<=0.01) return '';
-
+    // Build per-batch breakdown: parent = group total, children = each finished derivative
+    const batchBlocks = batchGroups.map(g=>{
       const childRows = [];
       // Only show variation breakdown rows. The "Raw remaining" line is intentionally
       // omitted — the head figure already reflects what is physically in this store.
-      Object.entries(productionsFromThisBatch).sort((a,b)=>b[1]-a[1]).forEach(([prodName,kg])=>{
+      Object.entries(g.productions).sort((a,b)=>b[1]-a[1]).forEach(([prodName,kg])=>{
         childRows.push(`<div class="store-batch-child">
           <span>↳ ☕ ${escapeHtml(prodName)}</span>
           <span>${fmt(kg)} kg</span>
@@ -4590,7 +4616,7 @@ function renderDashboardStores(){
       return `<div class="store-batch-block">
         <div class="store-batch-head">
           <span>${getOriginEmoji(g.origin)} ${escapeHtml(g.origin)}${g.beanName?' – '+escapeHtml(g.beanName):''}${g.batch?` <span class="text-muted small" style="font-weight:400">[${escapeHtml(g.batch)}]</span>`:''}</span>
-          <span class="text-gold">${fmt(accounted)} kg</span>
+          <span class="text-gold">${fmt(g.accounted)} kg</span>
         </div>
         ${childRows.join('')}
       </div>`;
@@ -4619,7 +4645,7 @@ function renderDashboardStores(){
         </div>
       </div>
 
-      ${batchesHere.length>0
+      ${batchGroups.length>0
         ? `<div style="margin-top:10px">${batchBlocks}</div>`
         : '<div style="margin-top:10px;font-size:12px;color:var(--muted);border-top:1px solid var(--line);padding-top:10px;text-align:center">No stock assigned</div>'}
     </div>`;
@@ -5314,6 +5340,60 @@ function exportCSV(type){
     downloadCSV(`windmill-monthly-${now}.csv`,Object.entries(byMonth).map(([mo,v])=>[mo,v.batches,fmt(v.inKg),fmt(v.outKg),fmt(v.wasteKg),(v.inKg>0?(v.wasteKg/v.inKg)*100:0).toFixed(1)+'%']),['Month','Batches','Green In (kg)','Roasted Out (kg)','Wastage (kg)','Avg Waste %']);
   }else if(type==='stock'){
     downloadCSV(`windmill-stock-${now}.csv`,data.greenBeans.map(g=>[g.date,g.origin,g.beanName||'',g.supplier,g.storeName||'',fmt(g.kg),fmt(g.remaining),g.batch||'',g.cost||0,g.notes||'']),['Date','Origin','Bean Name','Supplier','Store','Received (kg)','Remaining (kg)','Batch','Cost','Notes']);
+  }else if(type==='store_overview'){
+    // Exact CSV mirror of the Dashboard's store cards: same grouping (transfers
+    // merged into their base batch), same totals, one section per store.
+    const productionsByBatch=buildProductionsByBatch();
+    const rows=[];
+    getAllStoreBalances().forEach(s=>{
+      const{batchGroups, totalRawNow, totalFinishedFromHere, totalNow}=getStoreStockGroups(s.id, productionsByBatch);
+      rows.push([s.name,s.location,'TOTAL','','',fmt(totalNow),fmt(totalRawNow),fmt(totalFinishedFromHere)]);
+      batchGroups.forEach(g=>{
+        rows.push(['','',g.origin||'',g.beanName||'',g.batch||'',fmt(g.accounted),fmt(g.remaining),fmt(g.totalProduced)]);
+      });
+    });
+    downloadCSV(`windmill-store-stock-overview-${now}.csv`,rows,['Store','Location','Origin','Bean Name','Batch','Total Stock (kg)','Still Raw (kg)','As Variations (kg)']);
+  }else if(type==='stock_by_origin'){
+    // Aggregate CURRENT stock by origin across ALL stores (independent of the
+    // per-store breakdown). Batches that came from a store→store transfer are
+    // recognized by their base batch id (any trailing "-TRF" stripped) so a
+    // transferred lot doesn't get counted as a second, separate line.
+    const originMap={};
+    const originOrder=[];
+    data.greenBeans.forEach(g=>{
+      const origin=g.origin||'—';
+      if(!originMap[origin]){
+        originMap[origin]={origin,beanNames:new Set(),totalReceived:0,rawRemaining:0,storeKg:{}};
+        originOrder.push(origin);
+      }
+      const o=originMap[origin];
+      if(!g.isTransfer)o.totalReceived+=g.kg;
+      o.rawRemaining+=g.remaining;
+      if(g.beanName)o.beanNames.add(g.beanName);
+      if(g.remaining>0){
+        const storeName=g.storeName||'—';
+        o.storeKg[storeName]=(o.storeKg[storeName]||0)+g.remaining;
+      }
+    });
+    // Variations (roasted/processed product) traced back to their raw origin.
+    (data.productions||[]).forEach(p=>{
+      const src=data.greenBeans.find(g=>g.id===p.sourceId);
+      const origin=(src&&src.origin)||p.sourceOrigin||'';
+      if(!origin)return;
+      if(!originMap[origin]){
+        originMap[origin]={origin,beanNames:new Set(),totalReceived:0,rawRemaining:0,storeKg:{}};
+        originOrder.push(origin);
+      }
+      originMap[origin].variationKg=(originMap[origin].variationKg||0)+p.kg;
+    });
+    const rows=originOrder.map(o=>{
+      const e=originMap[o];
+      const variationKg=e.variationKg||0;
+      const totalStock=e.rawRemaining+variationKg;
+      const storesList=Object.entries(e.storeKg).sort((a,b)=>b[1]-a[1]).map(([name,kg])=>`${name}: ${fmt(kg)}kg`).join(' | ');
+      return [e.origin,Array.from(e.beanNames).join(', '),fmt(e.totalReceived),fmt(e.rawRemaining),fmt(variationKg),fmt(totalStock),storesList];
+    }).sort((a,b)=>parseFloat(b[5])-parseFloat(a[5]));
+    downloadCSV(`windmill-stock-by-origin-${now}.csv`,rows,['Origin','Bean Name(s)','Total Received (kg)','Still Raw (kg)','As Variations (kg)','Total Stock Now (kg)','Stores Holding Stock']);
   }else if(type==='roasting_origin'){
     const rows=[];
     const byOrigin={};
