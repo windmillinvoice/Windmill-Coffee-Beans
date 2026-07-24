@@ -2946,11 +2946,32 @@ function refreshRoastingSourceDropdown(){
   if(drsId&&drsStore){
     var eligible=data.greenBeans.filter(function(g){return g.remaining>0&&g.storeId===drsId;});
     var eligibleVariations=(data.finishedProducts||[]).filter(function(p){return p.remaining>0&&p.storeId===drsId;});
+
+    // ── Group raw green-bean batches by Origin + Bean Name so the dropdown
+    //    shows ONE combined line per variety (with the total kg still
+    //    available), instead of a separate line for every single delivery
+    //    batch. Roasting from a combined line draws down the oldest
+    //    batches first (FIFO) — see addRoasting().
+    var groups={};   // key -> {origin,beanName,totalRemaining,batches:[...]}
+    eligible.forEach(function(g){
+      var key=(g.origin||'')+'||'+(g.beanName||'');
+      if(!groups[key])groups[key]={origin:g.origin,beanName:g.beanName||'',totalRemaining:0,batches:[]};
+      groups[key].totalRemaining+=g.remaining;
+      groups[key].batches.push(g);
+    });
+    Object.values(groups).forEach(function(grp){
+      grp.batches.sort(function(a,b){return (a.date||'').localeCompare(b.date||'');}); // oldest first
+    });
+    window._rSourceGroups=groups; // read by addRoasting() when a grp: option is submitted
+
     var opts='<option value="">-- Select batch from '+escapeHtml(drsStore.name)+' --</option>';
-    if(eligible.length){
+    var groupKeys=Object.keys(groups).sort(function(a,b){return groups[b].totalRemaining-groups[a].totalRemaining;});
+    if(groupKeys.length){
       opts+='<optgroup label="🌿 Raw Green Beans">';
-      eligible.forEach(function(g){
-        opts+='<option value="'+g.id+'">'+escapeHtml(g.origin)+(g.beanName?' - '+escapeHtml(g.beanName):'')+' ('+fmt(g.remaining)+' kg)</option>';
+      groupKeys.forEach(function(key){
+        var grp=groups[key];
+        var batchNote=grp.batches.length>1?(', '+grp.batches.length+' batches combined'):'';
+        opts+='<option value="grp:'+encodeURIComponent(key)+'">'+escapeHtml(grp.origin)+(grp.beanName?' - '+escapeHtml(grp.beanName):'')+' ('+fmt(grp.totalRemaining)+' kg'+batchNote+')</option>';
       });
       opts+='</optgroup>';
     }
@@ -2962,7 +2983,7 @@ function refreshRoastingSourceDropdown(){
       opts+='</optgroup>';
     }
     sel.innerHTML=opts;
-    var allIds=eligible.map(function(g){return g.id;}).concat(eligibleVariations.map(function(p){return 'var:'+p.id;}));
+    var allIds=groupKeys.map(function(k){return 'grp:'+encodeURIComponent(k);}).concat(eligibleVariations.map(function(p){return 'var:'+p.id;}));
     if(cur&&allIds.indexOf(cur)>=0)sel.value=cur;
     sel.disabled=false;
     if(lockNotice){
@@ -3177,7 +3198,40 @@ function addRoasting(){
     return;
   }
 
-  // ── Branch: RAW green bean source ──
+  // ── Branch: GROUPED raw source (option value is "grp:<origin>||<beanName>") ──
+  if(rawSourceId.indexOf('grp:')===0){
+    const key=decodeURIComponent(rawSourceId.slice(4));
+    const grp=(window._rSourceGroups||{})[key];
+    if(!grp){toast('That variety is no longer available — refresh and try again','error');return;}
+    if(grp.totalRemaining<inKg){toast(`Only ${fmt(grp.totalRemaining)} kg available across all ${grp.origin}${grp.beanName?' - '+grp.beanName:''} batches`,'error');return;}
+
+    // Draw down the oldest batches first until the requested kg is covered
+    let toTake=inKg;
+    const used=[]; // [{id,kg}] — exact kg pulled from each underlying batch
+    for(const b of grp.batches){
+      if(toTake<=0)break;
+      if(b.remaining<=0)continue;
+      const take=Math.min(b.remaining,toTake);
+      b.remaining-=take;
+      toTake-=take;
+      used.push({id:b.id,kg:take});
+    }
+    const wasteKg=inKg-outKg,wastePct=(wasteKg/inKg)*100;
+    const multiNote=used.length>1?` (${used.length} batches combined)`:'';
+    data.roasting.unshift({
+      id:uid(),date,
+      sourceId:used.length===1?used[0].id:'',
+      sourceBatchBreakdown:used,               // used by deleteRoasting() to restore each batch precisely
+      sourceName:`${grp.origin}${grp.beanName?' – '+grp.beanName:''}${multiNote}`,
+      sourceOrigin:grp.origin,sourceBeanName:grp.beanName,storeId:_drsId,storeName:_drsStore?_drsStore.name:'—',
+      level,inKg,outKg,wasteKg,wastePct,notes,finishedProduct,available:outKg
+    });
+    saveData();clearRForm();renderAll();
+    toast(`Roasting batch saved — ${fmt(outKg)} kg roasted from ${grp.origin}${grp.beanName?' - '+grp.beanName:''}${multiNote}, ${fmt(wasteKg)} kg waste`);
+    return;
+  }
+
+  // ── Branch: RAW green bean source (single specific batch id) ──
   const source=data.greenBeans.find(g=>g.id===rawSourceId);
   if(!source){toast('Source batch not found','error');return;}
   if(source.remaining<inKg){toast(`Only ${fmt(source.remaining)} kg available in this batch`,'error');return;}
@@ -3219,6 +3273,12 @@ function deleteRoasting(id){
       if(rec.sourceVariationId){
         const fp=data.finishedProducts.find(p=>p.id===rec.sourceVariationId);
         if(fp) fp.remaining+=rec.inKg;
+      }else if(rec.sourceBatchBreakdown&&rec.sourceBatchBreakdown.length){
+        // Grouped roast — restore each underlying batch by the exact kg it contributed
+        rec.sourceBatchBreakdown.forEach(u=>{
+          const src=data.greenBeans.find(g=>g.id===u.id);
+          if(src) src.remaining+=u.kg;
+        });
       }else{
         const src=data.greenBeans.find(g=>g.id===rec.sourceId);
         if(src) src.remaining+=rec.inKg;
@@ -4551,17 +4611,17 @@ function getStoreStockGroups(storeId, productionsByBatch){
 
   const totalReceived = batchesHere.reduce((x,g)=>x+g.kg, 0);
 
-  // Group batches by origin + bean + "base batch" (batch id with any trailing
-  // -TRF markers stripped) so a store→store transfer of an existing lot lands
-  // on the SAME line as the lot it came from, instead of showing as a second,
-  // duplicate-looking entry just because it's a different underlying record.
+  // Group batches by origin + bean name only, so every delivery of the same
+  // variety collapses into ONE combined line showing the total kg — instead
+  // of a separate line per delivery date/batch tag (which used to make the
+  // same variety show up multiple times just because it arrived on different
+  // days or via a store transfer).
   const groupsMap={};
   const groupOrder=[];
   batchesHere.forEach(g=>{
-    const baseBatch=String(g.batch||'').replace(/(-TRF)+$/i,'');
-    const key=String(g.origin||'').trim().toLowerCase()+'|'+String(g.beanName||'').trim().toLowerCase()+'|'+baseBatch.toLowerCase();
+    const key=String(g.origin||'').trim().toLowerCase()+'|'+String(g.beanName||'').trim().toLowerCase();
     if(!groupsMap[key]){
-      groupsMap[key]={origin:g.origin,beanName:g.beanName,batch:baseBatch,remaining:0,productions:{}};
+      groupsMap[key]={origin:g.origin,beanName:g.beanName,batch:'',remaining:0,productions:{}};
       groupOrder.push(key);
     }
     const grp=groupsMap[key];
@@ -4615,7 +4675,7 @@ function renderDashboardStores(){
 
       return `<div class="store-batch-block">
         <div class="store-batch-head">
-          <span>${getOriginEmoji(g.origin)} ${escapeHtml(g.origin)}${g.beanName?' – '+escapeHtml(g.beanName):''}${g.batch?` <span class="text-muted small" style="font-weight:400">[${escapeHtml(g.batch)}]</span>`:''}</span>
+          <span>${getOriginEmoji(g.origin)} ${escapeHtml(g.origin)}${g.beanName?' – '+escapeHtml(g.beanName):''}</span>
           <span class="text-gold">${fmt(g.accounted)} kg</span>
         </div>
         ${childRows.join('')}
@@ -5341,18 +5401,19 @@ function exportCSV(type){
   }else if(type==='stock'){
     downloadCSV(`windmill-stock-${now}.csv`,data.greenBeans.map(g=>[g.date,g.origin,g.beanName||'',g.supplier,g.storeName||'',fmt(g.kg),fmt(g.remaining),g.batch||'',g.cost||0,g.notes||'']),['Date','Origin','Bean Name','Supplier','Store','Received (kg)','Remaining (kg)','Batch','Cost','Notes']);
   }else if(type==='store_overview'){
-    // Exact CSV mirror of the Dashboard's store cards: same grouping (transfers
-    // merged into their base batch), same totals, one section per store.
+    // Exact CSV mirror of the Dashboard's store cards: same grouping (merged
+    // by Origin + Bean Name only, batch/date tags collapsed), same totals,
+    // one section per store.
     const productionsByBatch=buildProductionsByBatch();
     const rows=[];
     getAllStoreBalances().forEach(s=>{
       const{batchGroups, totalRawNow, totalFinishedFromHere, totalNow}=getStoreStockGroups(s.id, productionsByBatch);
-      rows.push([s.name,s.location,'TOTAL','','',fmt(totalNow),fmt(totalRawNow),fmt(totalFinishedFromHere)]);
+      rows.push([s.name,s.location,'TOTAL','',fmt(totalNow),fmt(totalRawNow),fmt(totalFinishedFromHere)]);
       batchGroups.forEach(g=>{
-        rows.push(['','',g.origin||'',g.beanName||'',g.batch||'',fmt(g.accounted),fmt(g.remaining),fmt(g.totalProduced)]);
+        rows.push(['','',g.origin||'',g.beanName||'',fmt(g.accounted),fmt(g.remaining),fmt(g.totalProduced)]);
       });
     });
-    downloadCSV(`windmill-store-stock-overview-${now}.csv`,rows,['Store','Location','Origin','Bean Name','Batch','Total Stock (kg)','Still Raw (kg)','As Variations (kg)']);
+    downloadCSV(`windmill-store-stock-overview-${now}.csv`,rows,['Store','Location','Origin','Bean Name','Total Stock (kg)','Still Raw (kg)','As Variations (kg)']);
   }else if(type==='stock_by_origin'){
     // Aggregate CURRENT stock by origin across ALL stores (independent of the
     // per-store breakdown). Batches that came from a store→store transfer are
