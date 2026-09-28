@@ -2,7 +2,7 @@
   "name": "Green Beans — Windmill Cafe & Roastery",
   "short_name": "Green Beans",
   "description": "Green bean stock, roasting log & reports for Windmill Cafe & Roastery",
-  "id": "./",
+  "id": "windmill-green-beans",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
